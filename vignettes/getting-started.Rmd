@@ -1,8 +1,8 @@
 ---
-title: "Getting started with YLLgmethods"
+title: "Getting started with estimandYLL"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Getting started with YLLgmethods}
+  %\VignetteIndexEntry{Getting started with estimandYLL}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -16,25 +16,34 @@ knitr::opts_chunk$set(
 )
 ```
 
-`YLLgmethods` estimates **years of life lost (YLL)** under the
-parametric g-formula with a discrete-time hazard model. This vignette
-walks through the typical workflow on the bundled toy dataset.
+`estimandYLL` estimates **years of life lost (YLL)** and counterfactual
+life expectancy under the parametric g-formula. The main interface is
+`estimand_yll()`.
+
+The estimand is stated through three arguments:
+
+1. `target_population`: who to average over.
+2. `intervention`: which exposure worlds or policy change to compare.
+3. `measure`: how to display the result.
 
 ```{r}
-library(YLLgmethods)
+library(estimandYLL)
 data(yll_toy)
 str(yll_toy)
 ```
 
-## ATE: average treatment effect in the whole population
+## Full contrasts
 
-`estimate_yll_gformula_ate()` is a thin wrapper that contrasts
-"everyone reference" vs. "everyone exposed" and averages over the
-entire study population.
+`intervention = "full_contrast"` compares the all-reference and all-exposed
+counterfactual worlds. The target population determines whether the result
+is ATE-like, ATT-like, or ATC-like.
 
 ```{r ate, eval = FALSE}
-res_ate <- estimate_yll_gformula_ate(
+res_all <- estimand_yll(
   data = yll_toy,
+  target_population = "all",
+  intervention = "full_contrast",
+  measure = "yll",
   B = 50,
   method = "normal",
   show_progress = FALSE,
@@ -52,27 +61,18 @@ res_ate <- estimate_yll_gformula_ate(
   use_future = FALSE
 )
 
-res_ate$summary
+res_all$summary
 ```
 
-The result object always contains:
-
-- `summary` — one row per starting age with point estimate, CI, and CI method
-- `detailed_results` — point estimates plus per-arm life expectancy and
-  both percentile and normal-approximation CIs (when `B > 0`)
-- `meta` — call metadata (`estimand`, `B`, `conf_level`, `integration`, …)
-- `marginal_survival_point` and `marginal_survival_boot` — marginal
-  survival curves used by the `plot_*()` helpers
-
-## ATT and ATC
-
-`_att()` averages the contrast over those who were observed exposed,
-`_atc()` over those observed at the reference level. Same arguments,
-different target population:
+Observed-exposed and observed-unexposed target populations are specified
+directly:
 
 ```{r att-atc, eval = FALSE}
-res_att <- estimate_yll_gformula_att(
+res_exposed <- estimand_yll(
   data = yll_toy,
+  target_population = "exposed",
+  intervention = "full_contrast",
+  measure = "yll",
   B = 50, method = "normal", show_progress = FALSE, use_future = FALSE,
   id_var = "id", time_var = "period", event_var = "event",
   exposure_var = "hypertension",
@@ -82,8 +82,11 @@ res_att <- estimate_yll_gformula_att(
   confounders_baseline = c("sex", "education_years", "bmi", "smoke_binary")
 )
 
-res_atc <- estimate_yll_gformula_atc(
+res_unexposed <- estimand_yll(
   data = yll_toy,
+  target_population = "unexposed",
+  intervention = "full_contrast",
+  measure = "life_year_change",
   B = 50, method = "normal", show_progress = FALSE, use_future = FALSE,
   id_var = "id", time_var = "period", event_var = "event",
   exposure_var = "hypertension",
@@ -94,52 +97,49 @@ res_atc <- estimate_yll_gformula_atc(
 )
 ```
 
-## Stochastic interventions
+With `measure = "life_year_change"`, an ATC-like harmful change is reported
+as a negative value.
 
-For policy-relevant questions where "set everyone to exposed" is
-unrealistic, use a **stochastic intervention** that shifts the exposure
-distribution. The convenience wrapper
-`estimate_yll_gformula_binary_stochastic_vs_natural()` compares a target
-intervention to the natural exposure distribution observed in the data.
+## Partial-change policies
 
-The example below contrasts a world in which 20% of the unexposed and
-100% of the exposed end up exposed against the natural distribution:
+`intervention = "partial_change"` compares the natural observed exposure
+distribution with a policy-like change in which only a specified fraction
+changes exposure state. In statistical terminology this is a stochastic
+intervention, but the API uses clinical policy language.
 
-```{r stochastic, eval = FALSE}
-res_increase <- estimate_yll_gformula_binary_stochastic_vs_natural(
+Example: 30% of observed-exposed individuals move to the reference level,
+averaged over observed-exposed individuals.
+
+```{r partial-change, eval = FALSE}
+res_quit <- estimand_yll(
   data = yll_toy,
-  prob_exposed_if_unexposed = 0.2,
-  prob_exposed_if_exposed   = 1.0,
-  target_population = NULL,
+  target_population = "exposed",
+  intervention = "partial_change",
+  change_from = "exposed",
+  change_to = "reference",
+  change_probability = 0.30,
+  measure = "life_year_change",
   B = 50, show_progress = FALSE, use_future = FALSE,
   id_var = "id", time_var = "period", event_var = "event",
-  exposure_var = "hypertension",
-  reference_level = "No", exposed_level = "Yes",
+  exposure_var = "smoke_binary",
+  reference_level = "Never", exposed_level = "Current/Ever",
   age_at_entry_var = "age",
   age_start = 50, age_end = 90, age_interval = 5,
-  confounders_baseline = c("sex", "education_years", "bmi", "smoke_binary")
+  confounders_baseline = c("sex", "education_years", "bmi")
 )
 ```
-
-See `vignette("interventional-effects", package = "YLLgmethods")` for the
-underlying theory and more examples.
 
 ## Visualisation
 
-Three plotting helpers are included; all return `ggplot2` objects so
-you can post-process freely.
-
 ```{r plots, eval = FALSE}
-plot_yll(res_ate)
-plot_conditional_survival(res_ate, age_start = 60)
-plot_marginal_survival(res_ate)
+plot_yll_estimate(res_all)
+plot_conditional_survival(res_all, age_start = 60)
+plot_marginal_survival(res_all)
 ```
 
-## Reproducibility tips
+## Result object
 
-- Set `seed` to make the bootstrap deterministic.
-- Set `use_future = TRUE` and configure a `future::plan()` to
-  parallelise the bootstrap.
-- `integration = "trapezoidal"` produces slightly smoother LE estimates;
-  the default `"left_rectangle"` is consistent with the discrete-time
-  hazard model.
+`summary` contains one row per starting age and includes the selected
+`estimate`, confidence interval, `target_population`, `intervention`, and
+`measure`. `detailed_results` additionally keeps the original `yll`,
+life-year change, and arm-specific life expectancies for checking.

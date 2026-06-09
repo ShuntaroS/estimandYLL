@@ -95,6 +95,10 @@ yll_ci_normal <- function(point_est, boot_df, conf_level) {
 #     read.
 #' @noRd
 yll_make_readable_results <- function(point_est, boot_df, summary_df, method) {
+  # English: The engine uses compact internal names (`le_m0`, `le_m1`) because
+  # it only knows "arm 0" and "arm 1". User-facing tables rename them to
+  # reference/exposed so the connection to the estimand is explicit.
+  # 日本語: エンジン内部では短い列名を使うが、利用者向けにはreference/exposedへ変換する。
   detailed_results <- summary_df |>
     rename(
       starting_age = age_start,
@@ -120,30 +124,44 @@ yll_make_readable_results <- function(point_est, boot_df, summary_df, method) {
 
   # Default to NA bounds; the branches below fill them in with whichever CI
   # method the user requested.
+  # English: `summary` intentionally keeps the arm-specific life expectancies.
+  # They make clinical tables easier to audit: readers can see both the
+  # selected contrast and the two underlying LE values.
+  # 日本語: summaryにもle_reference/le_exposedを残す。推定値だけでなく元の余命も確認できる。
   main_results <- detailed_results |>
-    select(starting_age, yll) |>
     mutate(
       ci_low = NA_real_,
       ci_high = NA_real_,
       ci_method = method
-    )
+    ) |>
+    select(starting_age, yll, le_reference, le_exposed, ci_low, ci_high, ci_method)
 
   if (identical(method, "percentile") &&
       all(c("ci_low_percentile", "ci_high_percentile") %in% names(detailed_results))) {
+    # English: Percentile intervals are asymmetric and are taken directly from
+    # the bootstrap distribution of YLL at each starting age.
+    # 日本語: percentile法ではbootstrap分布の分位点をそのまま信頼区間にする。
     main_results <- detailed_results |>
       transmute(
         starting_age,
         yll,
+        le_reference,
+        le_exposed,
         ci_low = .data[["ci_low_percentile"]],
         ci_high = .data[["ci_high_percentile"]],
         ci_method = method
       )
   } else if (identical(method, "normal") &&
              all(c("ci_low_normal", "ci_high_normal") %in% names(detailed_results))) {
+    # English: Normal intervals use the bootstrap standard error around the
+    # point estimate. This branch only selects the already-computed columns.
+    # 日本語: normal法では点推定値±標準誤差で作った列を選択する。
     main_results <- detailed_results |>
       transmute(
         starting_age,
         yll,
+        le_reference,
+        le_exposed,
         ci_low = .data[["ci_low_normal"]],
         ci_high = .data[["ci_high_normal"]],
         ci_method = method

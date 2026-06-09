@@ -118,8 +118,7 @@ yll_marginal_curves_with_ci <- function(marginal_survival_point,
 #' two intervention arms, optionally with a pointwise bootstrap confidence
 #' band.
 #'
-#' @param res A result object returned by [estimate_yll_gformula()] (or one of
-#'   its variants).
+#' @param res A result object returned by [estimand_yll()].
 #' @param age_start Numeric. The starting age \eqn{a_{\text{start}}} used to
 #'   condition the survival curve.
 #' @param conf_band Logical. If `TRUE` (default) and bootstrap curves are
@@ -195,14 +194,74 @@ plot_conditional_survival <- function(res,
   p
 }
 
+#' Plot the selected YLL estimate across starting ages
+#'
+#' Draws the main `estimate` column returned by [estimand_yll()]. When
+#' `measure = "life_year_change"`, positive values mean longer life expectancy
+#' after the stated intervention and negative values mean shorter life
+#' expectancy.
+#'
+#' @param res A result object returned by [estimand_yll()].
+#' @param conf_band Logical. If `TRUE` (default) and `ci_low`/`ci_high` are
+#'   present in `res$summary`, draws a confidence band.
+#'
+#' @return A `ggplot` object.
+#' @export
+plot_yll_estimate <- function(res, conf_band = TRUE) {
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    stop("Package 'ggplot2' is required for plot_yll_estimate().", call. = FALSE)
+  }
+
+  s <- res$summary
+  if (!("estimate" %in% names(s))) {
+    stop("Result has no `estimate` column. Use plot_yll() for legacy result objects.", call. = FALSE)
+  }
+
+  # English: `estimate` changes meaning with `measure`, so the y-axis label
+  # must be read from metadata rather than hard-coded as YLL.
+  # 日本語: estimate列はmeasureによって意味が変わるため、軸ラベルもmetaから決める。
+  measure <- if (!is.null(res$meta$measure)) res$meta$measure else unique(s$measure)[[1]]
+  y_label <- if (identical(measure, "life_year_change")) {
+    "Life-year change (years)"
+  } else {
+    "Years of life lost (years)"
+  }
+
+  # English: The zero line is clinically useful: values above zero mean
+  # longer life expectancy for life-year change, while values below zero mean
+  # harm. For YLL, zero is the null exposure contrast.
+  # 日本語: 0線は解釈の基準。life_year_changeでは正が余命増加、負が余命減少を表す。
+  p <- ggplot2::ggplot(s, ggplot2::aes(x = starting_age, y = estimate)) +
+    ggplot2::geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.4) +
+    ggplot2::geom_line(linewidth = 0.8) +
+    ggplot2::geom_point(size = 2) +
+    ggplot2::labs(
+      x = "Starting age (years)",
+      y = y_label
+    ) +
+    ggplot2::theme_minimal()
+
+  if (conf_band && all(c("ci_low", "ci_high") %in% names(s)) &&
+      any(is.finite(s$ci_low))) {
+    # English: CI columns have already been oriented to the chosen measure in
+    # `yll_add_measure_columns()`, so plotting can use them directly.
+    # 日本語: 信頼区間はmeasureに合わせて符号調整済みなので、そのまま描画する。
+    p <- p + ggplot2::geom_ribbon(
+      ggplot2::aes(ymin = ci_low, ymax = ci_high),
+      alpha = 0.2, colour = NA
+    )
+  }
+
+  p
+}
+
 #' Plot YLL across starting ages
 #'
 #' Draws estimated years of life lost (YLL) as a function of the starting age,
 #' with an optional confidence band when bootstrap CIs are available in the
 #' result object.
 #'
-#' @param res A result object returned by [estimate_yll_gformula()] (or one of
-#'   its variants).
+#' @param res A result object returned by [estimand_yll()].
 #' @param conf_band Logical. If `TRUE` (default) and `ci_low`/`ci_high` are
 #'   present in `res$summary`, draws a confidence band.
 #'
@@ -214,14 +273,24 @@ plot_yll <- function(res, conf_band = TRUE) {
   }
 
   s <- res$summary
+  # English: Keep `plot_yll()` backward compatible. New results have
+  # `estimate`; old internal/legacy results only have `yll`.
+  # 日本語: 新APIではestimateを描き、旧結果では従来通りyllを描く。
+  value_var <- if ("estimate" %in% names(s)) "estimate" else "yll"
+  y_label <- if ("estimate" %in% names(s) && identical(res$meta$measure, "life_year_change")) {
+    "Life-year change (years)"
+  } else {
+    "Years of life lost (years)"
+  }
+  s$.plot_value <- s[[value_var]]
 
-  p <- ggplot2::ggplot(s, ggplot2::aes(x = starting_age, y = yll)) +
+  p <- ggplot2::ggplot(s, ggplot2::aes(x = starting_age, y = .plot_value)) +
     ggplot2::geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.4) +
     ggplot2::geom_line(linewidth = 0.8) +
     ggplot2::geom_point(size = 2) +
     ggplot2::labs(
       x = "Starting age (years)",
-      y = "Years of life lost (years)"
+      y = y_label
     ) +
     ggplot2::theme_minimal()
 

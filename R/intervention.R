@@ -126,7 +126,7 @@ yll_resolve_exposed_probability <- function(data, intervention, reference_level,
 #' @return A function `f(data)` returning a numeric vector of length
 #'   `nrow(data)` whose entries are in `[0, 1]`.
 #'
-#' @export
+#' @keywords internal
 yll_make_binary_stochastic_intervention <- function(
     prob_exposed_if_unexposed,
     prob_exposed_if_exposed,

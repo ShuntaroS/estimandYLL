@@ -1,7 +1,11 @@
 # This file is part of the standard setup for testthat.
 # It is recommended that you do not modify it.
 
-library(testthat)
-library(YLLgmethods)
+if (requireNamespace("testthat", quietly = TRUE)) {
+  library(testthat)
+  library(estimandYLL)
 
-test_check("YLLgmethods")
+  test_check("estimandYLL")
+} else {
+  message("Package 'testthat' is not installed; skipping tests.")
+}

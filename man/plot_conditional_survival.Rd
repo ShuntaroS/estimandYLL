@@ -14,8 +14,7 @@ plot_conditional_survival(
 )
 }
 \arguments{
-\item{res}{A result object returned by \code{\link[=estimate_yll_gformula]{estimate_yll_gformula()}} (or one of
-its variants).}
+\item{res}{A result object returned by \code{\link[=estimand_yll]{estimand_yll()}}.}
 
 \item{age_start}{Numeric. The starting age \eqn{a_{\text{start}}} used to
 condition the survival curve.}

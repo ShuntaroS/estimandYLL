@@ -1,4 +1,4 @@
-Package: YLLgmethods
+Package: estimandYLL
 Title: Years of Life Lost via the G-Formula
 Version: 0.0.0.9000
 Authors@R:
@@ -8,15 +8,18 @@ Authors@R:
       role    = c("aut", "cre"),
       comment = c(ORCID = "0000-0002-6055-3649")
     )
+Author: Shuntaro Sato [aut, cre] (ORCID:
+    <https://orcid.org/0000-0002-6055-3649>)
+Maintainer: Shuntaro Sato <shuntaro.sato.stat@gmail.com>
 Description: Estimates Years of Life Lost (YLL) and counterfactual life
     expectancy under user-specified interventions on a binary exposure using
-    the parametric g-formula on the attained-age time scale. Supports ATE,
-    ATT, ATC, and stochastic / population interventions, with bootstrap
-    confidence intervals and helpers for plotting conditional and marginal
-    survival curves.
+    the parametric g-formula on the attained-age time scale. The main
+    interface makes the target population, intervention, and result measure
+    explicit, with bootstrap confidence intervals and helpers for plotting
+    conditional and marginal survival curves.
 License: MIT + file LICENSE
-URL: https://github.com/ShuntaroS/yll_g-methods, https://shuntaros.github.io/yll_g-methods/
-BugReports: https://github.com/ShuntaroS/yll_g-methods/issues
+URL: https://github.com/ShuntaroS/estimandYLL, https://shuntaros.github.io/estimandYLL/
+BugReports: https://github.com/ShuntaroS/estimandYLL/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
@@ -28,6 +31,7 @@ Imports:
     tidyr,
     rlang,
     purrr,
+    methods,
     stats,
     utils,
     survival,
@@ -37,6 +41,7 @@ Imports:
 Suggests:
     ggplot2,
     future,
+    rstpm2,
     testthat (>= 3.0.0),
     knitr,
     rmarkdown

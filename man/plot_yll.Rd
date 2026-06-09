@@ -7,8 +7,7 @@
 plot_yll(res, conf_band = TRUE)
 }
 \arguments{
-\item{res}{A result object returned by \code{\link[=estimate_yll_gformula]{estimate_yll_gformula()}} (or one of
-its variants).}
+\item{res}{A result object returned by \code{\link[=estimand_yll]{estimand_yll()}}.}
 
 \item{conf_band}{Logical. If \code{TRUE} (default) and \code{ci_low}/\code{ci_high} are
 present in \code{res$summary}, draws a confidence band.}
@@ -17,7 +16,7 @@ present in \code{res$summary}, draws a confidence band.}
 A \code{ggplot} object.
 }
 \description{
-Draws estimated years of life lost (YLL) as a function of the starting age,
-with an optional confidence band when bootstrap CIs are available in the
-result object.
+Draws the selected estimate as a function of the starting age. For new
+\code{estimand_yll()} results this uses \code{res$summary$estimate}; for
+legacy result objects it falls back to \code{res$summary$yll}.
 }

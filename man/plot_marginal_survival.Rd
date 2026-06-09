@@ -13,8 +13,7 @@ plot_marginal_survival(
 )
 }
 \arguments{
-\item{res}{A result object returned by \code{\link[=estimate_yll_gformula]{estimate_yll_gformula()}} (or one of
-its variants).}
+\item{res}{A result object returned by \code{\link[=estimand_yll]{estimand_yll()}}.}
 
 \item{conf_band}{Logical. If \code{TRUE} (default) and bootstrap curves are
 available, draws a pointwise confidence band around each curve.}

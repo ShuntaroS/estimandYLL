@@ -2,6 +2,7 @@
 # well-formed result object without errors.
 
 test_that("estimate_yll_gformula returns the expected object on toy data", {
+  skip_if_not_installed("Epi")
   data(yll_toy, envir = environment())
 
   res <- suppressWarnings(estimate_yll_gformula(

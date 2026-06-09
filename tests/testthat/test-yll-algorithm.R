@@ -54,6 +54,7 @@ simulate_known_model <- function(seed, n,
 
 test_that("g-formula recovers YLL from a known discrete-time model", {
   skip_on_cran()
+  skip_if_not_installed("Epi")
 
   sim <- simulate_known_model(seed = 42, n = 40000)
 
@@ -87,6 +88,7 @@ test_that("g-formula recovers YLL from a known discrete-time model", {
 
 test_that("g-formula returns ~0 YLL when exposure has no effect", {
   skip_on_cran()
+  skip_if_not_installed("Epi")
 
   set.seed(7)
   n <- 40000

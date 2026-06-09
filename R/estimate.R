@@ -1,3 +1,11 @@
+# Legacy internal interfaces.
+#
+# English: The public API now lives in `estimand_yll()` (`R/api.R`). The
+# functions in this file are kept as an internal compatibility layer and as
+# the modelling engine used to verify that the new API reproduces the old
+# estimands. 日本語: 公開入口は `estimand_yll()` に集約し、このファイルの
+# 旧関数は内部互換と検証のために残す。
+
 #' Estimate YLL via the g-formula (ATE / ATT / ATC)
 #'
 #' Fits a discrete-time hazard model on the attained-age time scale, builds
@@ -54,7 +62,7 @@
 #'
 #' @examples
 #' \donttest{
-#' data(yll_toy, package = "YLLgmethods")
+#' data(yll_toy, package = "estimandYLL")
 #' res <- estimate_yll_gformula_ate(
 #'   data                 = yll_toy,
 #'   B                    = 0,
@@ -74,7 +82,7 @@
 #' res$summary
 #' }
 #'
-#' @export
+#' @keywords internal
 estimate_yll_gformula <- function(
     data,
     B = 1000,
@@ -278,7 +286,7 @@ yll_run_bootstrap <- function(B, one_boot, use_future, show_progress) {
 #' @seealso [yll_make_binary_stochastic_intervention()],
 #'   [estimate_yll_gformula_binary_stochastic_vs_natural()].
 #'
-#' @export
+#' @keywords internal
 estimate_yll_gformula_intervention <- function(
     data,
     intervention_reference,
@@ -438,7 +446,7 @@ estimate_yll_gformula_intervention <- function(
 #'   Probabilities defining the *exposed* intervention.
 #'
 #' @return Same list structure as [estimate_yll_gformula()].
-#' @export
+#' @keywords internal
 estimate_yll_gformula_binary_stochastic <- function(
     data,
     prob_exposed_if_unexposed_reference,
@@ -526,7 +534,7 @@ estimate_yll_gformula_binary_stochastic <- function(
 #'   defining the comparison intervention.
 #'
 #' @return Same list structure as [estimate_yll_gformula()].
-#' @export
+#' @keywords internal
 estimate_yll_gformula_binary_stochastic_vs_natural <- function(
     data,
     prob_exposed_if_unexposed,
@@ -592,19 +600,19 @@ estimate_yll_gformula_binary_stochastic_vs_natural <- function(
 NULL
 
 #' @rdname estimate_yll_gformula_estimand_wrappers
-#' @export
+#' @keywords internal
 estimate_yll_gformula_ate <- function(...) {
   estimate_yll_gformula(..., estimand = "ATE")
 }
 
 #' @rdname estimate_yll_gformula_estimand_wrappers
-#' @export
+#' @keywords internal
 estimate_yll_gformula_att <- function(...) {
   estimate_yll_gformula(..., estimand = "ATT")
 }
 
 #' @rdname estimate_yll_gformula_estimand_wrappers
-#' @export
+#' @keywords internal
 estimate_yll_gformula_atc <- function(...) {
   estimate_yll_gformula(..., estimand = "ATC")
 }
