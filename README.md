@@ -24,15 +24,13 @@ The package supports:
 
 ## Documentation
 
-Full reference and vignettes are available on the package website:
+Documentation is available in this repository:
 
-**<https://shuntaros.github.io/estimandYLL/>**
-
-- [Function reference](https://shuntaros.github.io/estimandYLL/reference/index.html)
-- [Getting started](https://shuntaros.github.io/estimandYLL/articles/getting-started.html)
-- [Generalized interventional effects](https://shuntaros.github.io/estimandYLL/articles/interventional-effects.html)
-- [estimandYLL 入門](https://shuntaros.github.io/estimandYLL/articles/getting-started-ja.html)
-- [interventional effects 日本語版](https://shuntaros.github.io/estimandYLL/articles/interventional-effects-ja.html)
+- [Function reference](https://github.com/ShuntaroS/estimandYLL/tree/main/man)
+- [Getting started](https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/getting-started.Rmd)
+- [Generalized interventional effects](https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/interventional-effects.Rmd)
+- [estimandYLL 入門](https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/getting-started-ja.Rmd)
+- [interventional effects 日本語版](https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/interventional-effects-ja.Rmd)
 
 ## Installation
 
@@ -222,13 +220,13 @@ years of life lost (YLL) と反事実的な平均余命を推定する R package
 
 ## ドキュメント
 
-関数リファレンスと vignette は package website で確認できます。
+関数リファレンスと vignette は GitHub repository で確認できます。
 
-**<https://shuntaros.github.io/estimandYLL/>**
-
-- [Function reference](https://shuntaros.github.io/estimandYLL/reference/index.html)
-- [Getting started](https://shuntaros.github.io/estimandYLL/articles/getting-started.html)
-- [Generalized interventional effects](https://shuntaros.github.io/estimandYLL/articles/interventional-effects.html)
+- [Function reference](https://github.com/ShuntaroS/estimandYLL/tree/main/man)
+- [Getting started](https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/getting-started.Rmd)
+- [Generalized interventional effects](https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/interventional-effects.Rmd)
+- [estimandYLL 入門](https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/getting-started-ja.Rmd)
+- [interventional effects 日本語版](https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/interventional-effects-ja.Rmd)
 
 ## インストール
 
