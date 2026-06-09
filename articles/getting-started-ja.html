@@ -5,12 +5,12 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Getting started with estimandYLL • estimandYLL</title>
+<title>estimandYLL 入門 • estimandYLL</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Getting started with estimandYLL">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="estimandYLL 入門">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -58,27 +58,27 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1>Getting started with estimandYLL</h1>
+      <h1>estimandYLL 入門</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/getting-started.Rmd" class="external-link"><code>vignettes/getting-started.Rmd</code></a></small>
-      <div class="d-none name"><code>getting-started.Rmd</code></div>
+      <small class="dont-index">Source: <a href="https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/getting-started-ja.Rmd" class="external-link"><code>vignettes/getting-started-ja.Rmd</code></a></small>
+      <div class="d-none name"><code>getting-started-ja.Rmd</code></div>
     </div>
 
     
     
-<p><code>estimandYLL</code> estimates <strong>years of life lost
-(YLL)</strong> and counterfactual life expectancy under the parametric
-g-formula. The main interface is <code><a href="../reference/estimand_yll.html">estimand_yll()</a></code>.</p>
-<p>The estimand is stated through three arguments:</p>
+<p><code>estimandYLL</code> は、パラメトリック g-formula に基づいて
+<strong>years of life lost (YLL)</strong> と反事実的な平均余命を推定する
+package です。 主な入口は <code><a href="../reference/estimand_yll.html">estimand_yll()</a></code> です。</p>
+<p>この package では、estimand を以下の3つの引数で明示します。</p>
 <ol style="list-style-type: decimal">
 <li>
-<code>target_population</code>: who to average over.</li>
+<code>target_population</code>: 誰で平均するか。</li>
 <li>
-<code>intervention</code>: which exposure worlds or policy change to
-compare.</li>
+<code>intervention</code>: どの曝露世界、またはどの policy change
+を比較するか。</li>
 <li>
-<code>measure</code>: how to display the result.</li>
+<code>measure</code>: 結果をどの向きで表示するか。</li>
 </ol>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/ShuntaroS/estimandYLL" class="external-link">estimandYLL</a></span><span class="op">)</span></span>
@@ -97,10 +97,10 @@ compare.</li>
 <div class="section level2">
 <h2 id="full-contrasts">Full contrasts<a class="anchor" aria-label="anchor" href="#full-contrasts"></a>
 </h2>
-<p><code>intervention = "full_contrast"</code> compares the
-all-reference and all-exposed counterfactual worlds. The target
-population determines whether the result is ATE-like, ATT-like, or
-ATC-like.</p>
+<p><code>intervention = "full_contrast"</code> は、全員が reference
+level である反事実世界と、 全員が exposed level
+である反事実世界を比較します。<code>target_population</code> によって、
+結果が ATE-like、ATT-like、ATC-like のどれに対応するかが決まります。</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">res_all</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimand_yll.html">estimand_yll</a></span><span class="op">(</span></span>
 <span>  data <span class="op">=</span> <span class="va">yll_toy</span>,</span>
@@ -125,8 +125,8 @@ ATC-like.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">res_all</span><span class="op">$</span><span class="va">summary</span></span></code></pre></div>
-<p>Observed-exposed and observed-unexposed target populations are
-specified directly:</p>
+<p>観察上の曝露者、観察上の非曝露者を target population
+として明示できます。</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">res_exposed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimand_yll.html">estimand_yll</a></span><span class="op">(</span></span>
 <span>  data <span class="op">=</span> <span class="va">yll_toy</span>,</span>
@@ -155,19 +155,19 @@ specified directly:</p>
 <span>  age_start <span class="op">=</span> <span class="fl">50</span>, age_end <span class="op">=</span> <span class="fl">90</span>, age_interval <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  confounders_baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"education_years"</span>, <span class="st">"bmi"</span>, <span class="st">"smoke_binary"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>With <code>measure = "life_year_change"</code>, an ATC-like harmful
-change is reported as a negative value.</p>
+<p><code>measure = "life_year_change"</code> を使うと、ATC-like
+な有害方向の変化は 負の値として表示されます。</p>
 </div>
 <div class="section level2">
 <h2 id="partial-change-policies">Partial-change policies<a class="anchor" aria-label="anchor" href="#partial-change-policies"></a>
 </h2>
-<p><code>intervention = "partial_change"</code> compares the natural
-observed exposure distribution with a policy-like change in which only a
-specified fraction changes exposure state. In statistical terminology
-this is a stochastic intervention, but the API uses clinical policy
-language.</p>
-<p>Example: 30% of observed-exposed individuals move to the reference
-level, averaged over observed-exposed individuals.</p>
+<p><code>intervention = "partial_change"</code>
+は、自然な観察曝露分布と、 一定割合の対象者だけ曝露状態が変わる
+policy-like な介入を比較します。 統計学的には stochastic intervention
+に相当しますが、API では臨床家にも 読みやすい policy language
+を使っています。</p>
+<p>例: 観察上の曝露者の30%が reference level に移る policy を、
+観察上の曝露者で平均します。</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">res_quit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimand_yll.html">estimand_yll</a></span><span class="op">(</span></span>
 <span>  data <span class="op">=</span> <span class="va">yll_toy</span>,</span>
@@ -187,7 +187,7 @@ level, averaged over observed-exposed individuals.</p>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="visualisation">Visualisation<a class="anchor" aria-label="anchor" href="#visualisation"></a>
+<h2 id="可視化">可視化<a class="anchor" aria-label="anchor" href="#%E5%8F%AF%E8%A6%96%E5%8C%96"></a>
 </h2>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/plot_yll_estimate.html">plot_yll_estimate</a></span><span class="op">(</span><span class="va">res_all</span><span class="op">)</span></span>
@@ -195,14 +195,14 @@ level, averaged over observed-exposed individuals.</p>
 <span><span class="fu"><a href="../reference/plot_marginal_survival.html">plot_marginal_survival</a></span><span class="op">(</span><span class="va">res_all</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="result-object">Result object<a class="anchor" aria-label="anchor" href="#result-object"></a>
+<h2 id="結果オブジェクト">結果オブジェクト<a class="anchor" aria-label="anchor" href="#%E7%B5%90%E6%9E%9C%E3%82%AA%E3%83%96%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88"></a>
 </h2>
-<p><code>summary</code> contains one row per starting age and includes
-the selected <code>estimate</code>, confidence interval,
-<code>target_population</code>, <code>intervention</code>, and
-<code>measure</code>. <code>detailed_results</code> additionally keeps
-the original <code>yll</code>, life-year change, and arm-specific life
-expectancies for checking.</p>
+<p><code>summary</code> には開始年齢ごとの結果が入り、選択された
+<code>estimate</code>、信頼区間、
+<code>target_population</code>、<code>intervention</code>、<code>measure</code>
+が含まれます。 <code>detailed_results</code> には、元の
+<code>yll</code>、life-year change、各 arm の平均余命も
+確認用に保持されます。</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

@@ -5,12 +5,12 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Interventional effects with estimandYLL • estimandYLL</title>
+<title>estimandYLL における interventional effects • estimandYLL</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Interventional effects with estimandYLL">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="estimandYLL における interventional effects">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -58,89 +58,85 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1>Interventional effects with estimandYLL</h1>
+      <h1>estimandYLL における interventional effects</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/interventional-effects.Rmd" class="external-link"><code>vignettes/interventional-effects.Rmd</code></a></small>
-      <div class="d-none name"><code>interventional-effects.Rmd</code></div>
+      <small class="dont-index">Source: <a href="https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/interventional-effects-ja.Rmd" class="external-link"><code>vignettes/interventional-effects-ja.Rmd</code></a></small>
+      <div class="d-none name"><code>interventional-effects-ja.Rmd</code></div>
     </div>
 
     
     
-<p>This vignette explains how <code>estimandYLL</code> represents
-interventional effects. The package emphasizes that the estimand is not
-only an exposure contrast; it also requires a <strong>target
-population</strong>.</p>
+<p>この vignette では、<code>estimandYLL</code> が interventional
+effects をどのように 表現するかを説明します。この package では、estimand
+は単なる曝露コントラスト ではなく、<strong>target population</strong>
+も必要であることを重視します。</p>
 <pre class="text"><code><span><span class="va">Estimand</span> <span class="op">=</span> <span class="va">target_population</span> <span class="op">+</span> <span class="va">intervention</span> <span class="op">+</span> <span class="va">measure</span></span></code></pre>
 <div class="section level2">
 <h2 id="target-population">Target population<a class="anchor" aria-label="anchor" href="#target-population"></a>
 </h2>
-<p><code>target_population</code> states whose counterfactual life
-expectancies are averaged:</p>
+<p><code>target_population</code>
+は、誰の反事実的な平均余命を平均するかを指定します。</p>
 <ul>
 <li>
-<code>"all"</code>: everyone in the study population.</li>
+<code>"all"</code>: 研究対象集団の全員。</li>
 <li>
-<code>"exposed"</code>: individuals observed at the exposed
-level.</li>
+<code>"exposed"</code>: 観察上 exposed level にいた人。</li>
 <li>
-<code>"unexposed"</code>: individuals observed at the reference
-level.</li>
+<code>"unexposed"</code>: 観察上 reference level にいた人。</li>
 </ul>
-<p>The hazard model is fit in the full dataset. The target population
-changes only the averaging step after counterfactual survival curves
-have been built.</p>
+<p>ハザードモデルは全データで fit します。<code>target_population</code>
+が変えるのは、 反事実的な survival curve
+を作った後の平均化のステップだけです。</p>
 </div>
 <div class="section level2">
 <h2 id="interventions">Interventions<a class="anchor" aria-label="anchor" href="#interventions"></a>
 </h2>
-<p><code>intervention = "full_contrast"</code> compares two static
-worlds:</p>
+<p><code>intervention = "full_contrast"</code> は、2つの static worlds
+を比較します。</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi mathvariant="normal">L</mi><mi mathvariant="normal">E</mi></mrow><mrow><mi>a</mi><mo>=</mo><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">f</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">e</mi></mrow></mrow></msup><mspace width="1.0em"></mspace><mtext mathvariant="normal">versus</mtext><mspace width="1.0em"></mspace><msup><mrow><mi mathvariant="normal">L</mi><mi mathvariant="normal">E</mi></mrow><mrow><mi>a</mi><mo>=</mo><mrow><mi mathvariant="normal">e</mi><mi mathvariant="normal">x</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msup><mi>.</mi></mrow><annotation encoding="application/x-tex">
 \mathrm{LE}^{a=\mathrm{reference}}
 \quad \text{versus} \quad
 \mathrm{LE}^{a=\mathrm{exposed}}.
 </annotation></semantics></math></p>
-<p><code>intervention = "partial_change"</code> compares the natural
-observed exposure distribution with a policy-like partial change. For
-example:</p>
+<p><code>intervention = "partial_change"</code>
+は、自然な観察曝露分布と、 policy-like な partial change
+を比較します。例えば次のような介入です。</p>
 <ul>
-<li>observed-exposed people: 30% move to reference, 70% stay
-exposed;</li>
-<li>observed-unexposed people: stay unexposed.</li>
+<li>観察上の曝露者: 30%が reference に移り、70%は exposed のまま。</li>
+<li>観察上の非曝露者: 非曝露のまま。</li>
 </ul>
-<p>Internally, this is a binary stochastic intervention. For each
-subject the engine forms</p>
+<p>内部的には、これは二値曝露に対する stochastic intervention です。
+各対象者について、推定エンジンは次の survival curve を作ります。</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>S</mi><mi>i</mi><mo>*</mo></msubsup><mo stretchy="false" form="prefix">(</mo><mi>t</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>−</mo><msub><mi>p</mi><mi>i</mi></msub><mo stretchy="false" form="postfix">)</mo><msubsup><mi>S</mi><mi>i</mi><mrow><mi>a</mi><mo>=</mo><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">f</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">e</mi></mrow></mrow></msubsup><mo stretchy="false" form="prefix">(</mo><mi>t</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><msub><mi>p</mi><mi>i</mi></msub><msubsup><mi>S</mi><mi>i</mi><mrow><mi>a</mi><mo>=</mo><mrow><mi mathvariant="normal">e</mi><mi mathvariant="normal">x</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msubsup><mo stretchy="false" form="prefix">(</mo><mi>t</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">
 S_i^*(t) =
 (1 - p_i) S_i^{a=\mathrm{reference}}(t)
 + p_i S_i^{a=\mathrm{exposed}}(t),
 </annotation></semantics></math></p>
-<p>then averages
+<p>そのうえで、指定された target population 内で
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>S</mi><mi>i</mi><mo>*</mo></msubsup><mo stretchy="false" form="prefix">(</mo><mi>t</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">S_i^*(t)</annotation></semantics></math>
-in the stated target population.</p>
+を平均します。</p>
 </div>
 <div class="section level2">
 <h2 id="measure">Measure<a class="anchor" aria-label="anchor" href="#measure"></a>
 </h2>
-<p><code>measure = "yll"</code> reports</p>
+<p><code>measure = "yll"</code> は次を報告します。</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">L</mi><mi mathvariant="normal">E</mi></mrow><mrow><mi>r</mi><mi>e</mi><mi>f</mi><mi>e</mi><mi>r</mi><mi>e</mi><mi>n</mi><mi>c</mi><mi>e</mi></mrow></msub><mo>−</mo><msub><mrow><mi mathvariant="normal">L</mi><mi mathvariant="normal">E</mi></mrow><mrow><mi>e</mi><mi>x</mi><mi>p</mi><mi>o</mi><mi>s</mi><mi>e</mi><mi>d</mi></mrow></msub><mi>.</mi></mrow><annotation encoding="application/x-tex">
 \mathrm{LE}_{reference} - \mathrm{LE}_{exposed}.
 </annotation></semantics></math></p>
-<p>This is the usual years-of-life-lost orientation. A harmful exposure
-tends to produce a positive value.</p>
-<p><code>measure = "life_year_change"</code> reports the clinically
-oriented change in life expectancy for the stated intervention
-direction. For an ATC-like question in which observed-unexposed people
-become exposed, a harmful exposure therefore gives a negative value.</p>
+<p>これは通常の years-of-life-lost
+の向きです。有害曝露では正の値になりやすい 表示です。</p>
+<p><code>measure = "life_year_change"</code>
+は、指定した介入方向に沿った臨床的に解釈しやすい
+平均余命の変化を報告します。例えば、観察上の非曝露者が曝露状態になるという
+ATC-like な問いでは、有害曝露の影響は負の値になります。</p>
 </div>
 <div class="section level2">
 <h2 id="worked-example">Worked example<a class="anchor" aria-label="anchor" href="#worked-example"></a>
 </h2>
-<p>Imagine a programme where 20% of observed-unexposed individuals
-become hypertensive, and observed-hypertensive individuals stay
-hypertensive. The target population is explicitly the observed-unexposed
-group.</p>
+<p>観察上の非高血圧者の20%が高血圧になり、観察上の高血圧者は高血圧のまま、
+という programme を考えます。target population
+は明示的に観察上の非高血圧者です。</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/ShuntaroS/estimandYLL" class="external-link">estimandYLL</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">yll_toy</span><span class="op">)</span></span>
@@ -167,17 +163,19 @@ group.</p>
 <div class="section level2">
 <h2 id="identification-assumptions">Identification assumptions<a class="anchor" aria-label="anchor" href="#identification-assumptions"></a>
 </h2>
-<p>The usual g-formula assumptions are required:</p>
+<p>通常の g-formula と同じ仮定が必要です。</p>
 <ul>
-<li>consistency of the counterfactual outcomes under the hypothesised
-regimes;</li>
-<li>conditional exchangeability given the measured covariates;</li>
-<li>positivity for the chosen intervention and target population;</li>
-<li>a correctly specified discrete-time hazard model.</li>
+<li>仮定した regime のもとでの counterfactual outcomes に対する
+consistency。</li>
+<li>測定された共変量で条件づけた conditional exchangeability。</li>
+<li>選択した intervention と target population に対する
+positivity。</li>
+<li>discrete-time hazard model の正しい指定。</li>
 </ul>
-<p>Partial-change policies can be more plausible than setting everyone
-to one exposure state, especially when a full intervention would be
-unrealistic or would strain positivity.</p>
+<p>Partial-change policy
+は、全員を1つの曝露状態に固定する介入よりも現実的な場合が あります。特に
+full intervention が非現実的であったり、positivity の問題を強める
+場合には有用です。</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

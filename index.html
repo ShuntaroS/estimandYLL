@@ -35,7 +35,9 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="articles/getting-started.html">Getting started with estimandYLL</a></li>
+<li><a class="dropdown-item" href="articles/getting-started-ja.html">estimandYLL 入門</a></li>
+    <li><a class="dropdown-item" href="articles/getting-started.html">Getting started with estimandYLL</a></li>
+    <li><a class="dropdown-item" href="articles/interventional-effects-ja.html">estimandYLL における interventional effects</a></li>
     <li><a class="dropdown-item" href="articles/interventional-effects.html">Interventional effects with estimandYLL</a></li>
   </ul>
 </li>
@@ -75,6 +77,8 @@
 <li><a href="https://shuntaros.github.io/estimandYLL/reference/index.html">Function reference</a></li>
 <li><a href="https://shuntaros.github.io/estimandYLL/articles/getting-started.html">Getting started</a></li>
 <li><a href="https://shuntaros.github.io/estimandYLL/articles/interventional-effects.html">Generalized interventional effects</a></li>
+<li><a href="https://shuntaros.github.io/estimandYLL/articles/getting-started-ja.html">estimandYLL 入門</a></li>
+<li><a href="https://shuntaros.github.io/estimandYLL/articles/interventional-effects-ja.html">interventional effects 日本語版</a></li>
 </ul>
 </div>
 <div class="section level2">
@@ -247,8 +251,211 @@
 <h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>
 </h2>
 <p>MIT © 2026 Shuntaro Sato.</p>
+<hr>
 </div>
 </div>
+<div class="section level1">
+<h1 id="estimandyll-日本語版">estimandYLL 日本語版<a class="anchor" aria-label="anchor" href="#estimandyll-%E6%97%A5%E6%9C%AC%E8%AA%9E%E7%89%88"></a>
+</h1>
+<!-- badges: start -->
+
+<p><code>estimandYLL</code> は、二値曝露に対するユーザー指定の介入のもとで、 years of life lost (YLL) と反事実的な平均余命を推定する R package です。推定は到達年齢を時間軸とするパラメトリック <strong>g-formula</strong> に基づきます。</p>
+<p>この package は以下をサポートします。</p>
+<ul>
+<li>明示的な target population: 全対象者、観察上の曝露者、観察上の非曝露者。</li>
+<li>
+<code><a href="reference/estimand_yll.html">estimand_yll()</a></code> という1つの主関数による、完全な曝露コントラストと 臨床的に表現しやすい partial-change policy。</li>
+<li>
+<code><a href="reference/conditional_yll.html">conditional_yll()</a></code> による、Poisson 回帰または Royston-Parmar 回帰を用いた 条件付き・観察群比較の YLL。</li>
+<li>正規近似または percentile 法による bootstrap 信頼区間。 必要に応じて <code>future</code> による並列化も可能です。</li>
+<li>開始年齢ごとの YLL measure、marginal survival curve、 conditional survival curve の可視化関数。</li>
+</ul>
+<div class="section level2">
+<h2 id="ドキュメント">ドキュメント<a class="anchor" aria-label="anchor" href="#%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88"></a>
+</h2>
+<p>関数リファレンスと vignette は package website で確認できます。</p>
+<p><strong><a href="https://shuntaros.github.io/estimandYLL/" class="uri">https://shuntaros.github.io/estimandYLL/</a></strong></p>
+<ul>
+<li><a href="https://shuntaros.github.io/estimandYLL/reference/index.html">Function reference</a></li>
+<li><a href="https://shuntaros.github.io/estimandYLL/articles/getting-started.html">Getting started</a></li>
+<li><a href="https://shuntaros.github.io/estimandYLL/articles/interventional-effects.html">Generalized interventional effects</a></li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="インストール">インストール<a class="anchor" aria-label="anchor" href="#%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB"></a>
+</h2>
+<p>現在、この package は GitHub から配布しています。</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"ShuntaroS/estimandYLL"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="quick-start-1">Quick start<a class="anchor" aria-label="anchor" href="#quick-start-1"></a>
+</h2>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/ShuntaroS/estimandYLL" class="external-link">estimandYLL</a></span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">yll_toy</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/estimand_yll.html">estimand_yll</a></span><span class="op">(</span></span>
+<span>  data <span class="op">=</span> <span class="va">yll_toy</span>,</span>
+<span>  id_var <span class="op">=</span> <span class="st">"id"</span>,</span>
+<span>  time_var <span class="op">=</span> <span class="st">"period"</span>,</span>
+<span>  event_var <span class="op">=</span> <span class="st">"event"</span>,</span>
+<span>  exposure_var <span class="op">=</span> <span class="st">"hypertension"</span>,</span>
+<span>  reference_level <span class="op">=</span> <span class="st">"No"</span>,</span>
+<span>  exposed_level <span class="op">=</span> <span class="st">"Yes"</span>,</span>
+<span>  age_at_entry_var <span class="op">=</span> <span class="st">"age"</span>,</span>
+<span>  target_population <span class="op">=</span> <span class="st">"all"</span>,</span>
+<span>  intervention <span class="op">=</span> <span class="st">"full_contrast"</span>,</span>
+<span>  measure <span class="op">=</span> <span class="st">"yll"</span>,</span>
+<span>  age_start <span class="op">=</span> <span class="fl">50</span>,</span>
+<span>  age_end <span class="op">=</span> <span class="fl">90</span>,</span>
+<span>  age_interval <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>  confounders_baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"education_years"</span>, <span class="st">"bmi"</span>, <span class="st">"smoke_binary"</span><span class="op">)</span>,</span>
+<span>  B <span class="op">=</span> <span class="fl">200</span>,</span>
+<span>  method <span class="op">=</span> <span class="st">"normal"</span>,</span>
+<span>  use_future <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">res</span><span class="op">$</span><span class="va">summary</span></span>
+<span><span class="fu"><a href="reference/plot_yll_estimate.html">plot_yll_estimate</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="reference/estimand_yll.html">estimand_yll()</a></code> の使い方と estimand の定義は、 <code><a href="articles/getting-started-ja.html">vignette("getting-started-ja", package = "estimandYLL")</a></code> でも確認できます。</p>
+</div>
+<div class="section level2">
+<h2 id="結果オブジェクト">結果オブジェクト<a class="anchor" aria-label="anchor" href="#%E7%B5%90%E6%9E%9C%E3%82%AA%E3%83%96%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88"></a>
+</h2>
+<p><code><a href="reference/estimand_yll.html">estimand_yll()</a></code> は以下を含む list を返します。</p>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="74%">
+</colgroup>
+<thead><tr>
+<th>要素</th>
+<th>説明</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>summary</code></td>
+<td>開始年齢ごとの推定値、信頼区間、measure、CI method。</td>
+</tr>
+<tr>
+<td><code>detailed_results</code></td>
+<td>
+<code>summary</code> に加えて、各 arm の平均余命と percentile / normal CI を保持します。</td>
+</tr>
+<tr>
+<td><code>meta</code></td>
+<td>
+<code>B</code>, <code>seed</code>, <code>conf_level</code>, <code>target_population</code>, <code>intervention</code>, <code>measure</code> などのメタ情報。</td>
+</tr>
+<tr>
+<td><code>marginal_survival_point</code></td>
+<td>各介入 arm の population-level marginal survival curve。</td>
+</tr>
+<tr>
+<td><code>marginal_survival_boot</code></td>
+<td>bootstrap iteration ごとの marginal survival curve。可視化関数で使います。</td>
+</tr>
+</tbody>
+</table>
+<p><code>method</code> は bootstrap CI の計算方法を指定します。既定値は正規近似 (<code>"normal"</code>) で、<code>"percentile"</code> も選べます。実際に使われた方法は <code>res$summary$ci_method</code> に記録されます。</p>
+</div>
+<div class="section level2">
+<h2 id="estimand-の考え方">Estimand の考え方<a class="anchor" aria-label="anchor" href="#estimand-%E3%81%AE%E8%80%83%E3%81%88%E6%96%B9"></a>
+</h2>
+<p>この package の中心は以下です。</p>
+<pre class="text"><code>YLL estimand = target_population + intervention + measure</code></pre>
+<p><code>target_population</code> は「誰で平均するか」を表します。</p>
+<ul>
+<li>
+<code>"all"</code>: 全対象者。ATE-like な target population。</li>
+<li>
+<code>"exposed"</code>: 観察上の曝露者。ATT-like な target population。</li>
+<li>
+<code>"unexposed"</code>: 観察上の非曝露者。ATC-like な target population。</li>
+</ul>
+<p><code>intervention</code> は「どの曝露世界を比較するか」を表します。</p>
+<ul>
+<li>
+<code>"full_contrast"</code>: 全員が reference である世界と、全員が exposed である世界を比較。</li>
+<li>
+<code>"partial_change"</code>: 自然な観察曝露分布と、一定割合だけ曝露状態が変わる policy-like な介入を比較。例えば、観察上の曝露者の30%が reference に移る場合など。</li>
+</ul>
+<p><code>measure</code> は「結果をどの向きで表示するか」を表します。</p>
+<ul>
+<li>
+<code>"yll"</code>: <code>LE_reference - LE_exposed</code>。</li>
+<li>
+<code>"life_year_change"</code>: 指定した介入方向に沿った、臨床的に解釈しやすい平均余命の変化。 有害曝露に対する ATC-like な変化では負の値になります。</li>
+</ul>
+<p>例: 観察上の喫煙者を target population として、その30%が禁煙する policy:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/estimand_yll.html">estimand_yll</a></span><span class="op">(</span></span>
+<span>  data <span class="op">=</span> <span class="va">yll_toy</span>,</span>
+<span>  id_var <span class="op">=</span> <span class="st">"id"</span>,</span>
+<span>  time_var <span class="op">=</span> <span class="st">"period"</span>,</span>
+<span>  event_var <span class="op">=</span> <span class="st">"event"</span>,</span>
+<span>  exposure_var <span class="op">=</span> <span class="st">"smoke_binary"</span>,</span>
+<span>  reference_level <span class="op">=</span> <span class="st">"Never"</span>,</span>
+<span>  exposed_level <span class="op">=</span> <span class="st">"Current/Ever"</span>,</span>
+<span>  age_at_entry_var <span class="op">=</span> <span class="st">"age"</span>,</span>
+<span>  target_population <span class="op">=</span> <span class="st">"exposed"</span>,</span>
+<span>  intervention <span class="op">=</span> <span class="st">"partial_change"</span>,</span>
+<span>  change_from <span class="op">=</span> <span class="st">"exposed"</span>,</span>
+<span>  change_to <span class="op">=</span> <span class="st">"reference"</span>,</span>
+<span>  change_probability <span class="op">=</span> <span class="fl">0.30</span>,</span>
+<span>  measure <span class="op">=</span> <span class="st">"life_year_change"</span>,</span>
+<span>  B <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  use_future <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>統計学的には <code>partial_change</code> は stochastic intervention に相当しますが、 ユーザー向け API では臨床的な policy language を使っています。</p>
+<p>可視化関数:</p>
+<ul>
+<li>
+<code><a href="reference/plot_yll_estimate.html">plot_yll_estimate()</a></code> / <code><a href="reference/plot_yll.html">plot_yll()</a></code>: 開始年齢ごとの選択された推定値。</li>
+<li>
+<code><a href="reference/plot_marginal_survival.html">plot_marginal_survival()</a></code> と <code><a href="reference/plot_conditional_survival.html">plot_conditional_survival()</a></code>: survival curve。</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="conditional-yll-1">Conditional YLL<a class="anchor" aria-label="anchor" href="#conditional-yll-1"></a>
+</h2>
+<p><code><a href="reference/conditional_yll.html">conditional_yll()</a></code> は、YLL methods literature で使われている Poisson 回帰および flexible parametric Royston-Parmar approach に近い、 回帰ベースの観察群比較を実装します。これは <code><a href="reference/estimand_yll.html">estimand_yll()</a></code> とは別の関数です。 <code><a href="reference/conditional_yll.html">conditional_yll()</a></code> には intervention や target population の引数はありません。 代わりに、baseline covariates に条件づけたうえで、reference 群と exposed 群の 予測 remaining life expectancy を比較します。</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">res_cond</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/conditional_yll.html">conditional_yll</a></span><span class="op">(</span></span>
+<span>  data <span class="op">=</span> <span class="va">yll_toy</span>,</span>
+<span>  method <span class="op">=</span> <span class="st">"poisson"</span>,</span>
+<span>  id_var <span class="op">=</span> <span class="st">"id"</span>,</span>
+<span>  time_var <span class="op">=</span> <span class="st">"period"</span>,</span>
+<span>  event_var <span class="op">=</span> <span class="st">"event"</span>,</span>
+<span>  exposure_var <span class="op">=</span> <span class="st">"hypertension"</span>,</span>
+<span>  reference_level <span class="op">=</span> <span class="st">"No"</span>,</span>
+<span>  exposed_level <span class="op">=</span> <span class="st">"Yes"</span>,</span>
+<span>  age_at_entry_var <span class="op">=</span> <span class="st">"age"</span>,</span>
+<span>  confounders_baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"education_years"</span>, <span class="st">"bmi"</span>, <span class="st">"smoke_binary"</span><span class="op">)</span>,</span>
+<span>  age_start <span class="op">=</span> <span class="fl">50</span>,</span>
+<span>  age_end <span class="op">=</span> <span class="fl">90</span>,</span>
+<span>  age_interval <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>  B <span class="op">=</span> <span class="fl">0</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><code>method = "flexible_parametric"</code> を使う場合は、optional package である <code>rstpm2</code> が必要です。</p>
+</div>
+<div class="section level2">
+<h2 id="注意点">注意点<a class="anchor" aria-label="anchor" href="#%E6%B3%A8%E6%84%8F%E7%82%B9"></a>
+</h2>
+<ul>
+<li>現在の実装は <strong>二値曝露</strong> を対象にしています。多値曝露や連続曝露にはまだ対応していません。</li>
+<li>entry age が対象者ごとに異なる場合、left truncation / delayed entry の問題が生じます。 現在の実装ではこの問題を厳密には扱っていないため、<code>age_at_entry_var</code> が大きく変動する データでの結果は予備的に解釈してください。</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="license-1">License<a class="anchor" aria-label="anchor" href="#license-1"></a>
+</h2>
+<p>MIT © 2026 Shuntaro Sato.</p>
+</div>
+</div>
+
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
@@ -283,6 +490,8 @@
 <div class="dev-status">
 <h2 data-toc-skip>Dev status</h2>
 <ul class="list-unstyled">
+<li><a href="https://github.com/ShuntaroS/estimandYLL/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/ShuntaroS/estimandYLL/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
+<li><a href="https://github.com/ShuntaroS/estimandYLL/actions/workflows/pkgdown.yaml" class="external-link"><img src="https://github.com/ShuntaroS/estimandYLL/actions/workflows/pkgdown.yaml/badge.svg" alt="pkgdown"></a></li>
 <li><a href="https://github.com/ShuntaroS/estimandYLL/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/ShuntaroS/estimandYLL/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
 <li><a href="https://github.com/ShuntaroS/estimandYLL/actions/workflows/pkgdown.yaml" class="external-link"><img src="https://github.com/ShuntaroS/estimandYLL/actions/workflows/pkgdown.yaml/badge.svg" alt="pkgdown"></a></li>
 </ul>
