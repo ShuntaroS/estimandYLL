@@ -1,0 +1,10 @@
+pandoc: 3.8.3
+pkgdown: 2.2.0
+pkgdown_sha: ~
+articles:
+  getting-started: getting-started.html
+  interventional-effects: interventional-effects.html
+last_built: 2026-06-09T12:59Z
+urls:
+  reference: https://shuntaros.github.io/estimandYLL/reference
+  article: https://shuntaros.github.io/estimandYLL/articles
