@@ -149,3 +149,107 @@ test_that("g-formula returns ~0 YLL when exposure has no effect", {
   est <- est[est$starting_age == 50, , drop = FALSE]
   expect_lt(abs(est$yll), 0.05)
 })
+
+test_that("YLL at a given starting age does not depend on the grid lower bound", {
+  skip_on_cran()
+  skip_if_not_installed("Epi")
+
+  data(yll_toy, envir = environment())
+
+  run_at <- function(age_start) {
+    suppressWarnings(suppressMessages(estimand_yll(
+      data = yll_toy,
+      B = 0,
+      show_progress = FALSE,
+      time_var = "period",
+      event_var = "event",
+      exposure_var = "hypertension",
+      reference_level = "No",
+      exposed_level = "Yes",
+      age_at_entry_var = "age",
+      age_start = age_start,
+      age_end = 90,
+      age_interval = 10,
+      confounders_baseline = c("sex", "education_years", "bmi", "smoke_binary"),
+      use_future = FALSE
+    )))$detailed_results
+  }
+
+  from_50 <- run_at(50)
+  from_70 <- run_at(70)
+
+  cols <- c("yll", "le_reference", "le_exposed")
+  expect_equal(
+    unname(unlist(from_50[from_50$starting_age == 70, cols])),
+    unname(unlist(from_70[from_70$starting_age == 70, cols])),
+    tolerance = 1e-10
+  )
+})
+
+test_that("numerically coded exposure levels are resolved as deterministic interventions", {
+  skip_on_cran()
+  skip_if_not_installed("Epi")
+
+  sim <- simulate_known_model(seed = 99, n = 20000)
+  sim_data <- sim$data
+  # Recode the exposure as 1 = reference / 2 = exposed.
+  sim_data$expo_num <- as.integer(sim_data$smoke_binary == "Current/Ever") + 1L
+  sim_data$smoke_binary <- NULL
+
+  est <- suppressWarnings(estimate_yll_gformula(
+    data = sim_data,
+    B = 0,
+    show_progress = FALSE,
+    time_var = "period",
+    event_var = "dflag",
+    exposure_var = "expo_num",
+    reference_level = 1,
+    exposed_level = 2,
+    age_at_entry_var = "age",
+    age_start = 50,
+    age_end = 50 + sim$max_follow,
+    age_interval = sim$max_follow,
+    confounders_baseline = NULL,
+    estimand = "ATE",
+    use_future = FALSE
+  ))$detailed_results
+
+  est <- est[est$starting_age == 50, , drop = FALSE]
+  expect_lt(abs(est$yll - sim$truth$yll), 0.1)
+})
+
+test_that("conditional_yll poisson does not depend on the grid lower bound", {
+  skip_on_cran()
+  skip_if_not_installed("Epi")
+
+  data(yll_toy, envir = environment())
+
+  run_at <- function(age_start) {
+    suppressWarnings(suppressMessages(conditional_yll(
+      data = yll_toy,
+      method = "poisson",
+      B = 0,
+      show_progress = FALSE,
+      time_var = "period",
+      event_var = "event",
+      exposure_var = "hypertension",
+      reference_level = "No",
+      exposed_level = "Yes",
+      age_at_entry_var = "age",
+      age_start = age_start,
+      age_end = 90,
+      age_interval = 10,
+      confounders_baseline = c("sex", "bmi")
+    )))$detailed_results
+  }
+
+  from_50 <- run_at(50)
+  from_70 <- run_at(70)
+
+  cols <- c("yll", "le_reference", "le_exposed")
+  expect_equal(
+    unname(unlist(from_50[from_50$starting_age == 70, cols])),
+    unname(unlist(from_70[from_70$starting_age == 70, cols])),
+    tolerance = 1e-10
+  )
+})

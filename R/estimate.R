@@ -144,6 +144,7 @@ estimate_yll_gformula <- function(
     integration = integration
   )
   marginal_survival_point <- attr(point_est, "marginal_curves")
+  conditional_survival_point <- attr(point_est, "conditional_curves")
 
   if (B < 1L) {
     warning("B = 0 so confidence intervals were not computed.", call. = FALSE)
@@ -159,7 +160,9 @@ estimate_yll_gformula <- function(
       ),
       method = method,
       marginal_survival_point = marginal_survival_point,
-      marginal_survival_boot  = NULL
+      marginal_survival_boot  = NULL,
+      conditional_survival_point = conditional_survival_point,
+      conditional_survival_boot  = NULL
     ))
   }
 
@@ -190,6 +193,7 @@ estimate_yll_gformula <- function(
 
   boot_df <- bind_rows(lapply(boot_results, `[[`, "yll"))
   marginal_survival_boot <- yll_collect_bootstrap_curves(boot_results)
+  conditional_survival_boot <- yll_collect_bootstrap_curves(boot_results, element = "conditional_curves")
 
   summary <- point_est
 
@@ -220,7 +224,9 @@ estimate_yll_gformula <- function(
     ),
     method = method,
     marginal_survival_point = marginal_survival_point,
-    marginal_survival_boot  = marginal_survival_boot
+    marginal_survival_boot  = marginal_survival_boot,
+    conditional_survival_point = conditional_survival_point,
+    conditional_survival_boot  = conditional_survival_boot
   )
 }
 
@@ -351,6 +357,7 @@ estimate_yll_gformula_intervention <- function(
     integration = integration
   )
   marginal_survival_point <- attr(point_est, "marginal_curves")
+  conditional_survival_point <- attr(point_est, "conditional_curves")
 
   if (B < 1L) {
     warning("B = 0 so confidence intervals were not computed.", call. = FALSE)
@@ -366,7 +373,9 @@ estimate_yll_gformula_intervention <- function(
       ),
       method = method,
       marginal_survival_point = marginal_survival_point,
-      marginal_survival_boot  = NULL
+      marginal_survival_boot  = NULL,
+      conditional_survival_point = conditional_survival_point,
+      conditional_survival_boot  = NULL
     ))
   }
 
@@ -399,6 +408,7 @@ estimate_yll_gformula_intervention <- function(
 
   boot_df <- bind_rows(lapply(boot_results, `[[`, "yll"))
   marginal_survival_boot <- yll_collect_bootstrap_curves(boot_results)
+  conditional_survival_boot <- yll_collect_bootstrap_curves(boot_results, element = "conditional_curves")
 
   summary <- point_est
 
@@ -429,7 +439,9 @@ estimate_yll_gformula_intervention <- function(
     ),
     method = method,
     marginal_survival_point = marginal_survival_point,
-    marginal_survival_boot  = marginal_survival_boot
+    marginal_survival_boot  = marginal_survival_boot,
+    conditional_survival_point = conditional_survival_point,
+    conditional_survival_boot  = conditional_survival_boot
   )
 }
 

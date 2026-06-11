@@ -414,14 +414,20 @@ yll_add_measure_columns <- function(df,
 
   # English: Always keep both orientations. `estimate` is the user-selected
   # primary column; `yll` and `life_year_change` remain available for checking.
+  # The measure choice must be evaluated *before* the mutate: inside mutate
+  # the name `measure` refers to the just-created column (one value per row),
+  # not to the function argument.
   # 日本語: 選択された主結果はestimateだが、yllとlife_year_changeの両方を残す。
+  # mutate内では`measure`が新設の列を指してしまうため、判定は先に済ませる。
+  measure_label <- measure
+  measure_is_yll <- identical(measure, "yll")
   out <- df |>
     mutate(
       target_population = target_population_label,
       intervention = intervention_label,
-      measure = measure,
+      measure = measure_label,
       life_year_change = life_year_change_multiplier * .data[["yll"]],
-      estimate = if (identical(measure, "yll")) .data[["yll"]] else .data[["life_year_change"]]
+      estimate = if (measure_is_yll) .data[["yll"]] else .data[["life_year_change"]]
     )
 
   if (all(c("le_reference", "le_exposed") %in% names(out))) {

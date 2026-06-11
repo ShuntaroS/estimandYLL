@@ -80,6 +80,17 @@ yll_resolve_exposed_probability <- function(data, intervention, reference_level,
     stop("Intervention must return a scalar or a vector of length `nrow(data)`.", call. = FALSE)
   }
 
+  # Check exposure level match FIRST, before numeric/probability path.
+  # This prevents numeric exposure codes (e.g. 1/2) from being silently
+  # interpreted as probabilities.
+  assigned_chr <- as.character(assigned)
+  reference_chr <- as.character(reference_level)
+  exposed_chr <- as.character(exposed_level)
+
+  if (all(assigned_chr %in% c(reference_chr, exposed_chr))) {
+    return(as.numeric(assigned_chr == exposed_chr))
+  }
+
   if (is.numeric(assigned)) {
     if (anyNA(assigned) || any(assigned < 0 | assigned > 1)) {
       stop("Numeric interventions must be probabilities between 0 and 1.", call. = FALSE)
@@ -94,18 +105,10 @@ yll_resolve_exposed_probability <- function(data, intervention, reference_level,
     return(as.numeric(assigned))
   }
 
-  assigned_chr <- as.character(assigned)
-  reference_chr <- as.character(reference_level)
-  exposed_chr <- as.character(exposed_level)
-
-  if (!all(assigned_chr %in% c(reference_chr, exposed_chr))) {
-    stop(
-      "Intervention values must be either probabilities in [0, 1] or exposure values matching the observed binary levels.",
-      call. = FALSE
-    )
-  }
-
-  as.numeric(assigned_chr == exposed_chr)
+  stop(
+    "Intervention values must be either probabilities in [0, 1] or exposure values matching the observed binary levels.",
+    call. = FALSE
+  )
 }
 
 #' Build a binary stochastic intervention

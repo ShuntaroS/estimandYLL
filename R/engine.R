@@ -15,16 +15,14 @@
 #   3. Build a counterfactual prediction grid (one row per subject per
 #      integer age in [age_start, age_end]).
 #   4. Resolve the two intervention specifications into per-row P(A* = exp).
-#   5. Predict per-row hazards under both arms, turn them into per-subject
-#      survival curves, then average across subjects within the chosen
-#      target population to get the marginal counterfactual curves.
-#   6. For every requested starting age a_start, condition on survival to
-#      a_start and integrate the residual life expectancies under each arm;
-#      YLL is the difference (LE_ref - LE_exp).
+#   5. For each requested starting age a_start, build per-subject survival
+#      curves starting from that age (cumprod restarts from 1), average across
+#      subjects within the chosen target population to get the conditional
+#      marginal curves, and integrate to get residual life expectancies.
+#   6. YLL is the difference (LE_ref - LE_exp).
 #
-# Returns a tibble with one row per starting age, plus the per-arm marginal
-# survival curve as an attribute (used by the bootstrap collector and the
-# plotting helpers).
+# Returns a tibble with one row per starting age, plus the conditional curves
+# and the marginal curves (= conditional from the minimum age) as attributes.
 #' @noRd
 estimate_yll_gformula_engine_single <- function(
     data,
@@ -42,7 +40,6 @@ estimate_yll_gformula_engine_single <- function(
     intervention_reference,
     intervention_exposed,
     target_population = NULL,
-    cut_by = 1L,
     integration = c("left_rectangle", "trapezoidal")
 ) {
   integration <- match.arg(integration)
@@ -52,7 +49,7 @@ estimate_yll_gformula_engine_single <- function(
     c(id_var, time_var, event_var, exposure_var, age_at_entry_var, confounders_baseline)
   )
 
-  cut_points <- yll_make_cut_points(data, time_var = time_var, by = cut_by)
+  cut_points <- yll_make_cut_points(data, time_var = time_var, by = 1L)
 
   # Person-period long form, then derive `age_temp` (= attained age within
   # the interval) and `expo` (a stable name for the exposure) so the rest of
@@ -77,14 +74,7 @@ estimate_yll_gformula_engine_single <- function(
     knot_p               = knot_p
   )
 
-  # Counterfactual data: only build rows for ages in [age_start, age_end].
-  #
-  # Mathematically we could expand to the full lifetime, but the conditional
-  # survival S(t)/S(a_start) cancels every hazard contribution at ages
-  # smaller than a_start, so restricting to this window gives identical
-  # results while (i) reducing compute roughly proportionally and (ii)
-  # avoiding extrapolation of the hazard model into ages outside the
-  # observed support.
+  # Counterfactual data: build rows for ages in [age_start, age_end].
   cf_base <- yll_expand_counterfactual_data(
     data           = data,
     id_var         = id_var,
@@ -93,9 +83,7 @@ estimate_yll_gformula_engine_single <- function(
     age_temp_end   = as.integer(age_end)
   )
 
-  # Per-subject P(A* = exposed) under each intervention arm. These are vectors
-  # of length nrow(cf_base) and will be used to mix the two per-arm survival
-  # curves into the marginal counterfactual curves.
+  # Per-subject P(A* = exposed) under each intervention arm.
   p_exposed_reference <- yll_resolve_exposed_probability(
     cf_base,
     intervention_reference,
@@ -109,57 +97,61 @@ estimate_yll_gformula_engine_single <- function(
     exposed_level = exposed_level
   )
 
-  # Predict hazards under "everyone reference" and "everyone exposed" copies
-  # of the counterfactual data, then turn them into per-subject survival
-  # curves via cumulative product.
+  # Predict hazards under "everyone reference" and "everyone exposed" copies.
   cf0 <- cf_base
   cf1 <- cf_base
   cf0$expo <- reference_level
   cf1$expo <- exposed_level
   cf_base$hazard0 <- yll_predict_hazard(fit, cf0)
   cf_base$hazard1 <- yll_predict_hazard(fit, cf1)
-  cf_base <- yll_compute_individual_survival_curves(cf_base, id_var = id_var)
 
-  # Apply the target-population mask *after* counterfactual curves are built.
-  # This way the hazard model is always fit on the full sample, and only the
-  # averaging step changes when the user selects a different estimand.
+  # Apply the target-population mask *before* the per-a_start loop.
   pop_idx <- yll_resolve_population_index(cf_base, target_population)
   cf_pop <- cf_base[pop_idx, , drop = FALSE]
   p_exposed_reference <- p_exposed_reference[pop_idx]
   p_exposed_exposed <- p_exposed_exposed[pop_idx]
 
-  s0 <- yll_mean_survival_under_intervention(cf_pop, p_exposed_reference, surv_name = "surv0")
-  s1 <- yll_mean_survival_under_intervention(cf_pop, p_exposed_exposed, surv_name = "surv1")
-
-  # `g_surv` holds the two marginal counterfactual survival curves on the
-  # same age grid; we keep it as one tibble for easy downstream use.
-  g_surv <- inner_join(s0, s1, by = "age_temp")
-
   age_list <- seq(from = age_start, to = age_end, by = age_interval)
 
-  # For each requested starting age: condition the marginal curves on
-  # survival to that age, integrate to get residual LE under each arm, and
-  # report the difference as YLL.
-  yll_table <- map_dfr(age_list, function(a_start) {
-    df_cond <- yll_conditional_survival_from_age(g_surv, a_start)
-    if (is.null(df_cond)) {
-      return(tibble(age_start = a_start, yll = NA_real_, le_m0 = NA_real_, le_m1 = NA_real_))
-    }
-
-    le_m0 <- yll_integrate_le(df_cond$age_temp, df_cond$surv_cond_g0, integration = integration)
-    le_m1 <- yll_integrate_le(df_cond$age_temp, df_cond$surv_cond_g1, integration = integration)
-
-    tibble(
-      age_start = a_start,
-      yll  = le_m0 - le_m1,
-      le_m0 = le_m0,
-      le_m1 = le_m1
+  # For each requested starting age: subset to ages >= a_start and restart the
+  # per-subject cumulative product there, so each subject's curve is
+  # conditional on being alive at a_start. Averaging these per-subject
+  # conditional curves keeps the estimand identical across starting ages and
+  # makes the result independent of the grid lower bound. `cf_pop` is sorted
+  # by (id, age), so logical subsetting keeps the intervention-probability
+  # vectors aligned with the rows.
+  conditional_curves <- map_dfr(age_list, function(a_start) {
+    keep <- cf_pop$age_temp >= a_start
+    sub_surv <- yll_compute_individual_survival_curves(
+      cf_pop[keep, , drop = FALSE],
+      id_var = id_var
     )
+    s0 <- yll_mean_survival_under_intervention(sub_surv, p_exposed_reference[keep], surv_name = "surv0")
+    s1 <- yll_mean_survival_under_intervention(sub_surv, p_exposed_exposed[keep], surv_name = "surv1")
+    inner_join(s0, s1, by = "age_temp") |>
+      mutate(age_start = a_start, .before = 1)
   })
 
-  # Stash the marginal curves on the returned tibble so the bootstrap
-  # collector and plotting helpers can pick them up without recomputing.
-  attr(yll_table, "marginal_curves") <- as_tibble(g_surv)
+  # Integrate each conditional curve to get residual life expectancy under
+  # each arm; YLL is the difference.
+  yll_table <- conditional_curves |>
+    group_by(age_start) |>
+    summarise(
+      le_m0 = yll_integrate_le(age_temp, surv0, integration = integration),
+      le_m1 = yll_integrate_le(age_temp, surv1, integration = integration),
+      .groups = "drop"
+    ) |>
+    mutate(yll = le_m0 - le_m1) |>
+    select(age_start, yll, le_m0, le_m1)
+
+  # Stash the curves as attributes for the bootstrap collector and the
+  # plotting helpers. The "marginal" curves are the a_start = age_start case:
+  # the full-grid curves conditional on being alive at age_start.
+  marginal_curves <- conditional_curves |>
+    filter(age_start == age_list[[1]]) |>
+    select(-"age_start")
+  attr(yll_table, "marginal_curves") <- as_tibble(marginal_curves)
+  attr(yll_table, "conditional_curves") <- as_tibble(conditional_curves)
   yll_table
 }
 
@@ -186,7 +178,6 @@ estimate_yll_gformula_single <- function(
     age_interval,
     confounders_baseline = NULL,
     estimand = c("ATT", "ATC", "ATE"),
-    cut_by = 1L,
     integration = c("left_rectangle", "trapezoidal")
 ) {
   estimand <- match.arg(estimand)
@@ -220,7 +211,6 @@ estimate_yll_gformula_single <- function(
       reference_level = reference_level,
       exposed_level = exposed_level
     ),
-    cut_by = cut_by,
     integration = integration
   )
 }

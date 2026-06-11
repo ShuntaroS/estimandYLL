@@ -71,11 +71,22 @@ yll_resolve_binary_levels <- function(x, reference_level = NULL, exposed_level =
   inferred_levels <- if (is.factor(x)) levels(x) else observed
   inferred_levels <- inferred_levels[inferred_levels %in% observed]
 
+  inferred <- FALSE
   if (is.null(reference_level)) {
     reference_level <- inferred_levels[[1]]
+    inferred <- TRUE
   }
   if (is.null(exposed_level)) {
     exposed_level <- inferred_levels[[2]]
+    inferred <- TRUE
+  }
+
+  if (inferred) {
+    message(
+      "Exposure levels inferred from the data: reference = '",
+      reference_level, "', exposed = '", exposed_level,
+      "'. Pass `reference_level` / `exposed_level` explicitly to override."
+    )
   }
 
   if (!(reference_level %in% observed)) {

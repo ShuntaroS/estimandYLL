@@ -31,7 +31,7 @@ test_that("conditional_yll poisson returns a readable result on toy data", {
 })
 
 test_that("conditional_yll flexible parametric gives an informative dependency error", {
-  skip_if_installed("rstpm2")
+  skip_if(requireNamespace("rstpm2", quietly = TRUE), "rstpm2 is installed")
   data(yll_toy, envir = environment())
 
   expect_error(

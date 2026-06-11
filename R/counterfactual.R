@@ -34,7 +34,7 @@ yll_expand_counterfactual_data <- function(
     dplyr::rename(expo_original = dplyr::all_of(exposure_var))
 
   out[["expo"]] <- out$expo_original
-  out
+  out |> dplyr::arrange(.data[[id_var]], age_temp)
 }
 
 # Convert per-interval hazards into per-subject survival curves under the two
@@ -87,48 +87,6 @@ yll_mean_survival_under_intervention <- function(df, p_exposed, surv_name = "sur
     ) |>
     group_by(age_temp) |>
     summarise(!!surv_name := mean(.surv_mix), .groups = "drop")
-}
-
-# Same lag-by-one cumulative-product as `yll_compute_individual_survival_curves`
-# but for a *single* hazard column, then averaged across subjects at each age.
-# Used by helpers that need a single observed-distribution survival curve
-# rather than the two intervention arms.
-#' @noRd
-yll_mean_survival_by_age <- function(df, id_var, hazard_var, surv_name = "surv") {
-  df |>
-    arrange(.data[[id_var]], age_temp) |>
-    group_by(.data[[id_var]]) |>
-    mutate(
-      .surv_after_interval = cumprod(1 - .data[[hazard_var]]),
-      .surv_at_age = lag(.surv_after_interval, default = 1)
-    ) |>
-    ungroup() |>
-    group_by(age_temp) |>
-    summarise(!!surv_name := mean(.surv_at_age), .groups = "drop")
-}
-
-# Convert a marginal survival curve S(t) into the *conditional* survival
-# curve given survival to a chosen starting age:
-#
-#   S(t | a_start) = S(t) / S(a_start) for t >= a_start.
-#
-# Returning NULL when S(a_start) is zero (or absent) lets the caller skip
-# starting ages where the curve is undefined, instead of producing NaNs.
-#' @noRd
-yll_conditional_survival_from_age <- function(g_surv_data, a_start) {
-  s0 <- g_surv_data[["surv0"]][g_surv_data$age_temp == a_start]
-  s1 <- g_surv_data[["surv1"]][g_surv_data$age_temp == a_start]
-
-  if (length(s0) == 0 || length(s1) == 0 || is.na(s0) || is.na(s1) || s0 <= 0 || s1 <= 0) {
-    return(NULL)
-  }
-
-  g_surv_data |>
-    filter(age_temp >= a_start) |>
-    mutate(
-      surv_cond_g0 = .data[["surv0"]] / s0,
-      surv_cond_g1 = .data[["surv1"]] / s1
-    )
 }
 
 # Numerically integrate a conditional survival curve to get residual life

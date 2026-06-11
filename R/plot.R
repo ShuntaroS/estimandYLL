@@ -1,75 +1,45 @@
-# Reconstruct the per-iteration conditional survival curves from the stack of
-# bootstrap marginal curves.
-#
-# `marginal_survival_boot` is a long tibble with one row per (iteration `b`,
-# age) and the two marginal arms `surv0`/`surv1`. For each iteration we slice
-# out that iteration's curve, condition it on survival to `age_start`
-# (i.e. divide by S_b(a_start)), and tag the result with `b` so callers can
-# compute pointwise quantiles across iterations. NULL-safe so degenerate
-# iterations (e.g. S_b(a_start) = 0) are silently dropped instead of poisoning
-# the downstream summaries.
-#' @noRd
-yll_bootstrap_conditional_curves <- function(marginal_survival_boot, age_start) {
-  if (is.null(marginal_survival_boot) || nrow(marginal_survival_boot) == 0) {
-    return(NULL)
-  }
-
-  bs <- unique(marginal_survival_boot[["b"]])
-  out_list <- lapply(bs, function(bi) {
-    one_b <- marginal_survival_boot[marginal_survival_boot[["b"]] == bi, , drop = FALSE]
-    cs <- yll_conditional_survival_from_age(one_b, age_start)
-    if (is.null(cs)) return(NULL)
-    cs[["b"]] <- bi
-    cs
-  })
-  out_list <- out_list[!vapply(out_list, is.null, logical(1))]
-  if (length(out_list) == 0) return(NULL)
-  bind_rows(out_list)
-}
-
 # Build the conditional-survival table the plotting helper consumes.
 #
-# Combines:
-#   * the point estimate `S(y | a_start)` for each arm (computed from the
-#     point-estimate marginal curves), and
-#   * pointwise confidence bounds at every age, taken as the lower/upper
-#     `(1 - conf_level)/2` quantiles of the bootstrap conditional curves.
-#
-# When no bootstrap curves are available (e.g. `B = 0`) we return just the
-# point estimate columns, and the calling plot function will skip the ribbon.
+# Reads `conditional_survival_point` (the per-a_start conditional curves from
+# the engine) and optionally `conditional_survival_boot` (same across bootstrap
+# iterations). Both are tibbles with an `age_start` column so filtering is
+# straightforward. When no bootstrap curves are available we return just the
+# point estimate columns.
 #' @noRd
-yll_conditional_curves_with_ci <- function(marginal_survival_point,
-                                           marginal_survival_boot,
+yll_conditional_curves_with_ci <- function(conditional_survival_point,
+                                           conditional_survival_boot,
                                            age_start,
                                            conf_level = 0.95) {
-  if (is.null(marginal_survival_point)) {
-    stop("Result has no marginal_survival_point. Re-run estimation to enable plotting.", call. = FALSE)
+  if (is.null(conditional_survival_point)) {
+    stop("Result has no conditional_survival_point. Re-run estimation to enable plotting.", call. = FALSE)
   }
 
-  point_cond <- yll_conditional_survival_from_age(marginal_survival_point, age_start)
-  if (is.null(point_cond)) {
-    stop("age_start = ", age_start, " is outside the available range or marginal survival is 0.", call. = FALSE)
+  point_cond <- conditional_survival_point[conditional_survival_point$age_start == age_start, , drop = FALSE]
+  if (nrow(point_cond) == 0) {
+    stop("age_start = ", age_start, " is not present in the conditional_survival_point.", call. = FALSE)
   }
 
   out <- tibble(
     age_temp     = point_cond$age_temp,
-    surv_cond_g0 = point_cond$surv_cond_g0,
-    surv_cond_g1 = point_cond$surv_cond_g1
+    surv_cond_g0 = point_cond$surv0,
+    surv_cond_g1 = point_cond$surv1
   )
 
-  boot_cond <- yll_bootstrap_conditional_curves(marginal_survival_boot, age_start)
-  if (!is.null(boot_cond) && nrow(boot_cond) > 0) {
-    alpha <- (1 - conf_level) / 2
-    ci_df <- boot_cond |>
-      group_by(age_temp) |>
-      summarise(
-        surv_cond_g0_low  = quantile(surv_cond_g0, alpha,    na.rm = TRUE),
-        surv_cond_g0_high = quantile(surv_cond_g0, 1 - alpha, na.rm = TRUE),
-        surv_cond_g1_low  = quantile(surv_cond_g1, alpha,    na.rm = TRUE),
-        surv_cond_g1_high = quantile(surv_cond_g1, 1 - alpha, na.rm = TRUE),
-        .groups = "drop"
-      )
-    out <- left_join(out, ci_df, by = "age_temp")
+  if (!is.null(conditional_survival_boot) && nrow(conditional_survival_boot) > 0) {
+    boot_sub <- conditional_survival_boot[conditional_survival_boot$age_start == age_start, , drop = FALSE]
+    if (nrow(boot_sub) > 0) {
+      alpha <- (1 - conf_level) / 2
+      ci_df <- boot_sub |>
+        group_by(age_temp) |>
+        summarise(
+          surv_cond_g0_low  = quantile(surv0, alpha,    na.rm = TRUE),
+          surv_cond_g0_high = quantile(surv0, 1 - alpha, na.rm = TRUE),
+          surv_cond_g1_low  = quantile(surv1, alpha,    na.rm = TRUE),
+          surv_cond_g1_high = quantile(surv1, 1 - alpha, na.rm = TRUE),
+          .groups = "drop"
+        )
+      out <- left_join(out, ci_df, by = "age_temp")
+    }
   }
 
   out
@@ -145,10 +115,10 @@ plot_conditional_survival <- function(res,
   }
 
   cs <- yll_conditional_curves_with_ci(
-    marginal_survival_point = res$marginal_survival_point,
-    marginal_survival_boot  = res$marginal_survival_boot,
-    age_start               = age_start,
-    conf_level              = conf_level
+    conditional_survival_point = res$conditional_survival_point,
+    conditional_survival_boot  = res$conditional_survival_boot,
+    age_start                  = age_start,
+    conf_level                 = conf_level
   )
 
   has_ci <- all(c("surv_cond_g0_low", "surv_cond_g0_high",

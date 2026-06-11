@@ -184,7 +184,9 @@ yll_make_readable_results <- function(point_est, boot_df, summary_df, method) {
 #' @noRd
 yll_build_result_object <- function(point_est, boot_df, summary_df, meta, method,
                                     marginal_survival_point = NULL,
-                                    marginal_survival_boot = NULL) {
+                                    marginal_survival_boot = NULL,
+                                    conditional_survival_point = NULL,
+                                    conditional_survival_boot = NULL) {
   readable <- yll_make_readable_results(point_est, boot_df, summary_df, method = method)
 
   list(
@@ -192,33 +194,41 @@ yll_build_result_object <- function(point_est, boot_df, summary_df, meta, method
     summary = readable$summary,
     meta = meta,
     marginal_survival_point = marginal_survival_point,
-    marginal_survival_boot  = marginal_survival_boot
+    marginal_survival_boot  = marginal_survival_boot,
+    conditional_survival_point = conditional_survival_point,
+    conditional_survival_boot  = conditional_survival_boot
   )
 }
 
-# Stack the per-iteration marginal survival curves into one long tibble
-# (with a `b` column identifying the iteration). NULL-safe and length-safe so
-# that bootstrap loops with degenerate iterations don't blow up.
+# Stack the per-iteration curves into one long tibble (with a `b` column
+# identifying the iteration). The `element` argument selects which element of
+# the boot result list to collect: `"curves"` for marginal curves (default)
+# or `"conditional_curves"` for the per-a_start conditional curves.
+# NULL-safe so degenerate iterations don't blow up.
 #' @noRd
-yll_collect_bootstrap_curves <- function(boot_results) {
-  curves <- lapply(boot_results, `[[`, "curves")
+yll_collect_bootstrap_curves <- function(boot_results, element = "curves") {
+  curves <- lapply(boot_results, `[[`, element)
   curves <- curves[!vapply(curves, is.null, logical(1))]
   if (length(curves) == 0) return(NULL)
   bind_rows(curves)
 }
 
 # Package one bootstrap iteration's outputs into the shape the parent loop
-# expects: a list with the YLL tibble (tagged with iteration index `b`) and
-# the iteration's marginal survival curves (also tagged with `b`).
+# expects: a list with the YLL tibble (tagged with iteration index `b`), the
+# iteration's marginal survival curves, and the conditional curves.
 #
-# The marginal curves come back as an attribute on the YLL tibble so the
-# inner engine can return them without changing its return type; here is
-# where we promote them into a proper top-level element.
+# Both curve types come back as attributes on the YLL tibble so the inner
+# engine can return them without changing its return type; here we promote
+# them into proper top-level elements.
 #' @noRd
 yll_one_boot_result <- function(yll_tibble, b) {
   curves <- attr(yll_tibble, "marginal_curves")
   if (!is.null(curves)) {
     curves[["b"]] <- b
   }
-  list(yll = mutate(yll_tibble, b = b), curves = curves)
+  cond_curves <- attr(yll_tibble, "conditional_curves")
+  if (!is.null(cond_curves)) {
+    cond_curves[["b"]] <- b
+  }
+  list(yll = mutate(yll_tibble, b = b), curves = curves, conditional_curves = cond_curves)
 }

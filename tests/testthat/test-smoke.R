@@ -26,7 +26,8 @@ test_that("estimate_yll_gformula returns the expected object on toy data", {
 
   expect_named(res, c(
     "detailed_results", "summary", "meta",
-    "marginal_survival_point", "marginal_survival_boot"
+    "marginal_survival_point", "marginal_survival_boot",
+    "conditional_survival_point", "conditional_survival_boot"
   ))
   expect_s3_class(res$summary, "data.frame")
   expect_true(all(c("starting_age", "yll", "ci_low", "ci_high", "ci_method") %in%
