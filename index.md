@@ -1,429 +1,133 @@
 # estimandYLL
 
-Years of life lost (YLL) and counterfactual life expectancy under
-user-specified interventions on a binary exposure, estimated with the
-parametric **g-formula** on the attained-age time scale.
+[![R-CMD-check](https://github.com/ShuntaroS/estimandYLL/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/ShuntaroS/estimandYLL/actions/workflows/R-CMD-check.yaml)
+[![pkgdown](https://github.com/ShuntaroS/estimandYLL/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/ShuntaroS/estimandYLL/actions/workflows/pkgdown.yaml)
 
-The package supports:
+Estimate **years of life lost (YLL)** between two binary exposure
+scenarios, for a stated baseline population and age window.
 
-- Explicit target populations: all individuals, observed-exposed
-  individuals, or observed-unexposed individuals.
-- Full exposure contrasts and clinically phrased partial-change policies
-  through one main function,
-  [`estimand_yll()`](https://shuntaros.github.io/estimandYLL/reference/estimand_yll.md).
-- Conditional, observed-group YLL by Poisson or Royston-Parmar
-  regression through
-  [`conditional_yll()`](https://shuntaros.github.io/estimandYLL/reference/conditional_yll.md).
-- Bootstrap confidence intervals (normal-approximation or percentile),
-  optionally parallelised with `future`.
-- Plotting helpers for marginal and conditional survival curves and for
-  the selected YLL measure across starting ages.
+**YLL = ERL under the reference level − ERL under the exposed level.**
+ERL is expected residual lifetime restricted at the upper age. The
+contrast has the same direction for every target population; the
+interpretation changes with the population being studied.
 
-## Documentation
+## Install
 
-Documentation is available in this repository:
-
-- [Function
-  reference](https://github.com/ShuntaroS/estimandYLL/tree/main/man)
-- [Getting
-  started](https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/getting-started.Rmd)
-- [Generalized interventional
-  effects](https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/interventional-effects.Rmd)
-- [estimandYLL
-  入門](https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/getting-started-ja.Rmd)
-- [interventional effects
-  日本語版](https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/interventional-effects-ja.Rmd)
-
-## Installation
-
-The package is currently distributed from GitHub:
+Version 0.1.0 is distributed from GitHub. It has not been submitted to
+CRAN.
 
 ``` r
 
-# install.packages("remotes")
+install.packages("remotes")
 remotes::install_github("ShuntaroS/estimandYLL")
 ```
 
-## Quick start
+## First estimate
 
 ``` r
 
 library(estimandYLL)
 data(yll_toy)
-
-res <- estimand_yll(
-  data = yll_toy,
-  id_var = "id",
-  time_var = "period",
-  event_var = "event",
+result <- estimate_yll(
+  data = yll_toy[1:500, ],
+  time_var = "period", event_var = "event",
   exposure_var = "hypertension",
-  reference_level = "No",
-  exposed_level = "Yes",
-  age_at_entry_var = "age",
-  target_population = "all",
-  intervention = "full_contrast",
-  measure = "yll",
-  age_start = 50,
-  age_end = 90,
-  age_interval = 5,
-  confounders_baseline = c("sex", "education_years", "bmi", "smoke_binary"),
-  B = 200,
-  method = "normal",
-  use_future = FALSE
+  reference_level = "No", exposed_level = "Yes",
+  age_at_entry_var = "age", target_population = "unexposed",
+  age_start = 50, age_end = 70, age_interval = 10,
+  confounders_baseline = "sex", B = 0, use_future = FALSE
 )
-
-res$summary
-plot_yll_estimate(res)
+result$summary
 ```
 
-See
-[`vignette("getting-started", package = "estimandYLL")`](https://shuntaros.github.io/estimandYLL/articles/getting-started.md)
-for a tour of the user-facing function and the estimand definition.
+This quick example uses 500 simulated people and skips confidence
+intervals. For an analysis, choose the age window, covariates and target
+population for your question, and use an adequate number of bootstrap
+replicates, for example `B = 2000`. The data are synthetic; this example
+does not reproduce the paper’s cohort results. No real participant
+records are distributed.
 
-## Result object
+`age_end` limits every integral. `age_interval` controls the spacing
+between reported starting ages; the main estimator still integrates on a
+one-year grid.
 
-[`estimand_yll()`](https://shuntaros.github.io/estimandYLL/reference/estimand_yll.md)
-returns a list with:
+## What to specify
 
-| Element | Description |
+| Argument | Meaning |
 |----|----|
-| `summary` | One row per starting age: selected estimate, CI, measure, and CI method. |
-| `detailed_results` | Same plus per-arm life expectancy and both percentile and normal CIs. |
-| `meta` | Call metadata (`B`, `seed`, `conf_level`, `target_population`, `intervention`, `measure`, …). |
-| `marginal_survival_point` | Population-level marginal survival curves under each intervention arm. |
-| `marginal_survival_boot` | Same, one row per bootstrap iteration (used by the plotting helpers). |
+| `target_population = "all"` | Average over all participants (ATE). |
+| `target_population = "exposed"` | Average over those observed exposed (ATT). |
+| `target_population = "unexposed"` | Average over those observed unexposed (ATU). |
+| `reference_level`, `exposed_level` | Observed values corresponding to x = 0 and x = 1. |
+| `ci_method = "normal"` | Bootstrap standard error with a normal approximation (default). |
+| `ci_method = "percentile"` | Quantiles of the same participant bootstrap distribution. |
 
-`method` selects between normal-approximation (`"normal"`, default) and
-percentile (`"percentile"`) bootstrap CIs; `res$summary$ci_method`
-records which one was used.
+The target population is required. Both interval methods resample people
+with replacement. Neither changes the fitted mortality model. Intervals
+are pointwise.
 
-## Estimand at a glance
+## Results and plots
 
-The main design is:
-
-``` text
-YLL estimand = target_population + intervention + measure
-```
-
-`target_population` answers “who are we averaging over?”:
-
-- `"all"`: all individuals (ATE-like).
-- `"exposed"`: individuals observed exposed (ATT-like).
-- `"unexposed"`: individuals observed unexposed (ATC-like).
-
-`intervention` answers “what exposure worlds are compared?”:
-
-- `"full_contrast"`: all reference versus all exposed.
-- `"partial_change"`: the natural observed distribution versus a
-  policy-like partial change, such as 30% of observed-exposed
-  individuals moving to the reference level.
-
-`measure` answers “how is the result displayed?”:
-
-- `"yll"`: `LE_reference - LE_exposed`.
-- `"life_year_change"`: the clinically oriented change in life
-  expectancy for the stated intervention direction. This makes harmful
-  ATC-like changes negative.
-
-Example: 30% of smokers quit, averaged over observed smokers:
+`result$summary` contains `starting_age`, `erl_reference`,
+`erl_exposed`, `yll`, `yll_se`, `ci_low` and `ci_high`. Lifetimes, their
+difference and uncertainty are measured in years. The remaining elements
+are `bootstrap_estimates`, `survival_curves`,
+`bootstrap_survival_curves`, and `meta`.
 
 ``` r
 
-estimand_yll(
-  data = yll_toy,
-  id_var = "id",
-  time_var = "period",
-  event_var = "event",
-  exposure_var = "smoke_binary",
-  reference_level = "Never",
-  exposed_level = "Current/Ever",
-  age_at_entry_var = "age",
-  target_population = "exposed",
-  intervention = "partial_change",
-  change_from = "exposed",
-  change_to = "reference",
-  change_probability = 0.30,
-  measure = "life_year_change",
-  B = 0,
-  use_future = FALSE
-)
+library(ggplot2)
+plot_yll(result) + labs(title = "YLL among participants without hypertension")
+plot_survival(result, age_start = 50) + theme_bw()
+# ggsave("yll.png", plot_yll(result), width = 6, height = 4, dpi = 300)
 ```
 
-In statistical terminology, `partial_change` is a stochastic
-intervention, but the user-facing API uses policy language.
+All plots are editable ggplot objects. The optional ggplot2 package is
+needed only for plotting. Poisson and Royston-Parmar comparators are
+available through
+[`estimate_yll_poisson()`](https://shuntaros.github.io/estimandYLL/reference/estimate_yll_poisson.md)
+and
+[`estimate_yll_royston_parmar()`](https://shuntaros.github.io/estimandYLL/reference/estimate_yll_royston_parmar.md);
+they standardize over the full sample. The latter requires the optional
+rstpm2 package.
 
-Plot helpers:
+## Read the documentation
 
-- [`plot_yll_estimate()`](https://shuntaros.github.io/estimandYLL/reference/plot_yll_estimate.md)
-  /
-  [`plot_yll()`](https://shuntaros.github.io/estimandYLL/reference/plot_yll.md)
-  — selected estimate across starting ages.
-- [`plot_marginal_survival()`](https://shuntaros.github.io/estimandYLL/reference/plot_marginal_survival.md)
-  and
-  [`plot_conditional_survival()`](https://shuntaros.github.io/estimandYLL/reference/plot_conditional_survival.md)
-  — survival curves.
-
-## Conditional YLL
-
-[`conditional_yll()`](https://shuntaros.github.io/estimandYLL/reference/conditional_yll.md)
-implements regression-based observed-group comparisons similar to the
-Poisson and flexible parametric Royston-Parmar approaches used in the
-YLL methods literature. It is separate from
-[`estimand_yll()`](https://shuntaros.github.io/estimandYLL/reference/estimand_yll.md):
-there is no intervention or target population argument. Instead, the
-function compares predicted remaining life expectancy for the reference
-and exposed groups, optionally conditioning on baseline covariates.
-
-``` r
-
-res_cond <- conditional_yll(
-  data = yll_toy,
-  method = "poisson",
-  id_var = "id",
-  time_var = "period",
-  event_var = "event",
-  exposure_var = "hypertension",
-  reference_level = "No",
-  exposed_level = "Yes",
-  age_at_entry_var = "age",
-  confounders_baseline = c("sex", "education_years", "bmi", "smoke_binary"),
-  age_start = 50,
-  age_end = 90,
-  age_interval = 5,
-  B = 0
-)
-```
-
-`method = "flexible_parametric"` requires the optional `rstpm2` package.
-
-## Caveats
-
-- The current implementation is for **binary** exposures. Multi-level
-  and continuous exposures are not yet supported.
-- Variable entry age introduces a left-truncation / delayed-entry
-  problem that the current implementation does not address rigorously;
-  treat results from datasets with variable `age_at_entry_var` as
-  preliminary.
-
-## License
-
-MIT © 2026 Shuntaro Sato.
-
-------------------------------------------------------------------------
-
-# estimandYLL 日本語版
-
-`estimandYLL` は、二値曝露に対するユーザー指定の介入のもとで、 years of
-life lost (YLL) と反事実的な平均余命を推定する R package
-です。推定は到達年齢を時間軸とするパラメトリック **g-formula**
-に基づきます。
-
-この package は以下をサポートします。
-
-- 明示的な target population:
-  全対象者、観察上の曝露者、観察上の非曝露者。
-- [`estimand_yll()`](https://shuntaros.github.io/estimandYLL/reference/estimand_yll.md)
-  という1つの主関数による、完全な曝露コントラストと 臨床的に表現しやすい
-  partial-change policy。
-- [`conditional_yll()`](https://shuntaros.github.io/estimandYLL/reference/conditional_yll.md)
-  による、Poisson 回帰または Royston-Parmar 回帰を用いた
-  条件付き・観察群比較の YLL。
-- 正規近似または percentile 法による bootstrap 信頼区間。 必要に応じて
-  `future` による並列化も可能です。
-- 開始年齢ごとの YLL measure、marginal survival curve、 conditional
-  survival curve の可視化関数。
-
-## ドキュメント
-
-関数リファレンスと vignette は GitHub repository で確認できます。
-
-- [Function
-  reference](https://github.com/ShuntaroS/estimandYLL/tree/main/man)
 - [Getting
-  started](https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/getting-started.Rmd)
-- [Generalized interventional
-  effects](https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/interventional-effects.Rmd)
-- [estimandYLL
-  入門](https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/getting-started-ja.Rmd)
-- [interventional effects
-  日本語版](https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/interventional-effects-ja.Rmd)
+  started](https://shuntaros.github.io/estimandYLL/articles/getting-started.html)
+- [Target populations and
+  interpretation](https://shuntaros.github.io/estimandYLL/articles/target-populations.html)
+- [Comparison
+  models](https://shuntaros.github.io/estimandYLL/articles/comparison-models.html)
+- [Migration from the development
+  API](https://shuntaros.github.io/estimandYLL/articles/migration.html)
+- [日本語の入門](https://shuntaros.github.io/estimandYLL/articles/getting-started-ja.html)
+- [Function
+  reference](https://shuntaros.github.io/estimandYLL/reference/index.html)
 
-## インストール
+## Interpretation and limitations
 
-現在、この package は GitHub から配布しています。
+The model uses observed person-period records after cohort entry. At
+each starting age, individual survival curves are restarted at one and
+then averaged over the target population’s baseline covariates. This
+does not select only people observed alive at that age and is not a
+principal-stratum effect.
 
-``` r
+A causal interpretation requires consistency, conditional
+exchangeability, positivity, appropriate censoring and entry
+assumptions, and an adequate model. The scenarios describe sustained
+exposure, not a change initiated at the starting age. Age extrapolation
+and sparse exposure-covariate combinations can make estimates sensitive
+to the model. Read the interpretation article before applying the
+package to an observational study.
 
-# install.packages("remotes")
-remotes::install_github("ShuntaroS/estimandYLL")
-```
+## Development and validation
 
-## Quick start
-
-``` r
-
-library(estimandYLL)
-data(yll_toy)
-
-res <- estimand_yll(
-  data = yll_toy,
-  id_var = "id",
-  time_var = "period",
-  event_var = "event",
-  exposure_var = "hypertension",
-  reference_level = "No",
-  exposed_level = "Yes",
-  age_at_entry_var = "age",
-  target_population = "all",
-  intervention = "full_contrast",
-  measure = "yll",
-  age_start = 50,
-  age_end = 90,
-  age_interval = 5,
-  confounders_baseline = c("sex", "education_years", "bmi", "smoke_binary"),
-  B = 200,
-  method = "normal",
-  use_future = FALSE
-)
-
-res$summary
-plot_yll_estimate(res)
-```
-
-[`estimand_yll()`](https://shuntaros.github.io/estimandYLL/reference/estimand_yll.md)
-の使い方と estimand の定義は、
-[`vignette("getting-started-ja", package = "estimandYLL")`](https://shuntaros.github.io/estimandYLL/articles/getting-started-ja.md)
-でも確認できます。
-
-## 結果オブジェクト
-
-[`estimand_yll()`](https://shuntaros.github.io/estimandYLL/reference/estimand_yll.md)
-は以下を含む list を返します。
-
-| 要素 | 説明 |
-|----|----|
-| `summary` | 開始年齢ごとの推定値、信頼区間、measure、CI method。 |
-| `detailed_results` | `summary` に加えて、各 arm の平均余命と percentile / normal CI を保持します。 |
-| `meta` | `B`, `seed`, `conf_level`, `target_population`, `intervention`, `measure` などのメタ情報。 |
-| `marginal_survival_point` | 各介入 arm の population-level marginal survival curve。 |
-| `marginal_survival_boot` | bootstrap iteration ごとの marginal survival curve。可視化関数で使います。 |
-
-`method` は bootstrap CI の計算方法を指定します。既定値は正規近似
-(`"normal"`) で、`"percentile"` も選べます。実際に使われた方法は
-`res$summary$ci_method` に記録されます。
-
-## Estimand の考え方
-
-この package の中心は以下です。
-
-``` text
-YLL estimand = target_population + intervention + measure
-```
-
-`target_population` は「誰で平均するか」を表します。
-
-- `"all"`: 全対象者。ATE-like な target population。
-- `"exposed"`: 観察上の曝露者。ATT-like な target population。
-- `"unexposed"`: 観察上の非曝露者。ATC-like な target population。
-
-`intervention` は「どの曝露世界を比較するか」を表します。
-
-- `"full_contrast"`: 全員が reference である世界と、全員が exposed
-  である世界を比較。
-- `"partial_change"`: 自然な観察曝露分布と、一定割合だけ曝露状態が変わる
-  policy-like な介入を比較。例えば、観察上の曝露者の30%が reference
-  に移る場合など。
-
-`measure` は「結果をどの向きで表示するか」を表します。
-
-- `"yll"`: `LE_reference - LE_exposed`。
-- `"life_year_change"`:
-  指定した介入方向に沿った、臨床的に解釈しやすい平均余命の変化。
-  有害曝露に対する ATC-like な変化では負の値になります。
-
-例: 観察上の喫煙者を target population として、その30%が禁煙する policy:
-
-``` r
-
-estimand_yll(
-  data = yll_toy,
-  id_var = "id",
-  time_var = "period",
-  event_var = "event",
-  exposure_var = "smoke_binary",
-  reference_level = "Never",
-  exposed_level = "Current/Ever",
-  age_at_entry_var = "age",
-  target_population = "exposed",
-  intervention = "partial_change",
-  change_from = "exposed",
-  change_to = "reference",
-  change_probability = 0.30,
-  measure = "life_year_change",
-  B = 0,
-  use_future = FALSE
-)
-```
-
-統計学的には `partial_change` は stochastic intervention
-に相当しますが、 ユーザー向け API では臨床的な policy language
-を使っています。
-
-可視化関数:
-
-- [`plot_yll_estimate()`](https://shuntaros.github.io/estimandYLL/reference/plot_yll_estimate.md)
-  /
-  [`plot_yll()`](https://shuntaros.github.io/estimandYLL/reference/plot_yll.md):
-  開始年齢ごとの選択された推定値。
-- [`plot_marginal_survival()`](https://shuntaros.github.io/estimandYLL/reference/plot_marginal_survival.md)
-  と
-  [`plot_conditional_survival()`](https://shuntaros.github.io/estimandYLL/reference/plot_conditional_survival.md):
-  survival curve。
-
-## Conditional YLL
-
-[`conditional_yll()`](https://shuntaros.github.io/estimandYLL/reference/conditional_yll.md)
-は、YLL methods literature で使われている Poisson 回帰および flexible
-parametric Royston-Parmar approach に近い、
-回帰ベースの観察群比較を実装します。これは
-[`estimand_yll()`](https://shuntaros.github.io/estimandYLL/reference/estimand_yll.md)
-とは別の関数です。
-[`conditional_yll()`](https://shuntaros.github.io/estimandYLL/reference/conditional_yll.md)
-には intervention や target population の引数はありません。
-代わりに、baseline covariates に条件づけたうえで、reference 群と exposed
-群の 予測 remaining life expectancy を比較します。
-
-``` r
-
-res_cond <- conditional_yll(
-  data = yll_toy,
-  method = "poisson",
-  id_var = "id",
-  time_var = "period",
-  event_var = "event",
-  exposure_var = "hypertension",
-  reference_level = "No",
-  exposed_level = "Yes",
-  age_at_entry_var = "age",
-  confounders_baseline = c("sex", "education_years", "bmi", "smoke_binary"),
-  age_start = 50,
-  age_end = 90,
-  age_interval = 5,
-  B = 0
-)
-```
-
-`method = "flexible_parametric"` を使う場合は、optional package である
-`rstpm2` が必要です。
-
-## 注意点
-
-- 現在の実装は **二値曝露**
-  を対象にしています。多値曝露や連続曝露にはまだ対応していません。
-- entry age が対象者ごとに異なる場合、left truncation / delayed entry
-  の問題が生じます。
-  現在の実装ではこの問題を厳密には扱っていないため、`age_at_entry_var`
-  が大きく変動する データでの結果は予備的に解釈してください。
+See [NEWS](https://shuntaros.github.io/estimandYLL/NEWS.md) for the
+breaking changes in 0.1.0 and [the validation
+record](https://github.com/ShuntaroS/estimandYLL/blob/main/notes/validation/README.md)
+for the 100-replicate comparison with the previous development version.
+Source scripts are provided there.
 
 ## License
 

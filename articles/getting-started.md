@@ -1,144 +1,119 @@
 # Getting started with estimandYLL
 
-`estimandYLL` estimates **years of life lost (YLL)** and counterfactual
-life expectancy under the parametric g-formula. The main interface is
-[`estimand_yll()`](https://shuntaros.github.io/estimandYLL/reference/estimand_yll.md).
+The package estimates a difference in restricted expected residual
+lifetime (ERL) between two exposure scenarios. State the target
+population and the age window first. The fitted hazard model uses the
+full analytic sample regardless of the target population.
 
-The estimand is stated through three arguments:
+## Prepare person-level data
 
-1.  `target_population`: who to average over.
-2.  `intervention`: which exposure worlds or policy change to compare.
-3.  `measure`: how to display the result.
+Use one row per person, a unique ID, positive follow-up duration in
+years, a 0/1 death indicator, age at entry, a binary exposure, and
+baseline covariates. Missing values in selected variables are rejected.
+Prepare a complete-case analysis explicitly and report how many people
+were excluded. Data columns must have syntactically valid R names.
+
+The included `yll_toy` data contain 5,000 simulated people. For a quick
+example we use 500 people, a short age window and no bootstrap. The
+synthetic smoking variable combines current and former smoking, so it
+should not be interpreted as the paper’s current-versus-never smoking
+comparison.
 
 ``` r
 
-library(estimandYLL)
 data(yll_toy)
-str(yll_toy)
-#> 'data.frame':    5000 obs. of  9 variables:
-#>  $ id             : int  1 2 3 4 5 6 7 8 9 10 ...
-#>  $ period         : num  15 15 15 15 15 ...
-#>  $ event          : int  0 0 1 0 0 0 0 0 0 1 ...
-#>  $ smoke_binary   : Factor w/ 2 levels "Never","Current/Ever": 1 1 1 2 2 2 2 1 1 2 ...
-#>  $ hypertension   : Factor w/ 2 levels "No","Yes": 1 2 1 1 1 1 1 1 2 2 ...
-#>  $ sex            : Factor w/ 2 levels "Female","Male": 2 2 2 1 1 2 1 2 1 1 ...
-#>  $ education_years: num  14 15 16 11 12 15 18 14 19 14 ...
-#>  $ bmi            : num  22 23 22 24.7 26.6 27.6 26.3 25.6 22.7 18.7 ...
-#>  $ age            : num  54 49 64 58 47 61 51 57 43 65 ...
+result <- estimate_yll(
+  data = yll_toy[1:500, ],
+  time_var = "period", event_var = "event",
+  exposure_var = "hypertension",
+  reference_level = "No", exposed_level = "Yes",
+  age_at_entry_var = "age", target_population = "unexposed",
+  age_start = 50, age_end = 70, age_interval = 10,
+  confounders_baseline = "sex", B = 0, use_future = FALSE
+)
+result$summary
+#> # A tibble: 3 × 7
+#>   starting_age erl_reference erl_exposed   yll yll_se ci_low ci_high
+#>          <dbl>         <dbl>       <dbl> <dbl>  <dbl>  <dbl>   <dbl>
+#> 1           50         18.7        18.3  0.393     NA     NA      NA
+#> 2           60          9.45        8.95 0.505     NA     NA      NA
+#> 3           70          0           0    0         NA     NA      NA
 ```
 
-## Full contrasts
+Here the target is people observed without hypertension. The estimate at
+age 50 compares expected years lived between ages 50 and 70 under the
+reference and exposed scenarios, averaged over those people’s baseline
+covariates. `age_interval = 10` reports ages 50, 60 and 70; the
+calculation uses annual hazards. All lifetimes and YLL are zero at age
+70 because the age window is empty.
 
-`intervention = "full_contrast"` compares the all-reference and
-all-exposed counterfactual worlds. The target population determines
-whether the result is ATE-like, ATT-like, or ATC-like.
+## Request confidence intervals
+
+Both options use a nonparametric participant bootstrap. Each replicate
+refits the model, including spline knot selection, and repeats
+prediction and standardization. The default normal interval is the point
+estimate plus or minus a normal quantile times the bootstrap standard
+error. The percentile interval takes quantiles of the replicate
+estimates.
 
 ``` r
 
-res_all <- estimand_yll(
-  data = yll_toy,
-  target_population = "all",
-  intervention = "full_contrast",
-  measure = "yll",
-  B = 50,
-  method = "normal",
-  show_progress = FALSE,
-  id_var = "id",
-  time_var = "period",
-  event_var = "event",
-  exposure_var = "hypertension",
-  reference_level = "No",
-  exposed_level = "Yes",
-  age_at_entry_var = "age",
-  age_start = 50,
-  age_end = 90,
-  age_interval = 5,
+result <- estimate_yll(
+  yll_toy, time_var = "period", event_var = "event",
+  exposure_var = "hypertension", reference_level = "No", exposed_level = "Yes",
+  age_at_entry_var = "age", target_population = "unexposed",
+  age_start = 40, age_end = 90, age_interval = 5,
   confounders_baseline = c("sex", "education_years", "bmi", "smoke_binary"),
-  use_future = FALSE
+  B = 2000, seed = 20260917, ci_method = "percentile", use_future = FALSE
 )
-
-res_all$summary
 ```
 
-Observed-exposed and observed-unexposed target populations are specified
-directly:
+The longer example is not executed during package checks. Failed
+replicates produce a warning and are recorded with iteration numbers and
+reasons in `result$meta$bootstrap_failures`. Intervals use the
+successful replicates; many failures undermine their interpretation. Do
+not treat a computed interval as evidence that the model was stable.
+
+## Inspect and customize plots
 
 ``` r
 
-res_exposed <- estimand_yll(
-  data = yll_toy,
-  target_population = "exposed",
-  intervention = "full_contrast",
-  measure = "yll",
-  B = 50, method = "normal", show_progress = FALSE, use_future = FALSE,
-  id_var = "id", time_var = "period", event_var = "event",
-  exposure_var = "hypertension",
-  reference_level = "No", exposed_level = "Yes",
-  age_at_entry_var = "age",
-  age_start = 50, age_end = 90, age_interval = 5,
-  confounders_baseline = c("sex", "education_years", "bmi", "smoke_binary")
-)
-
-res_unexposed <- estimand_yll(
-  data = yll_toy,
-  target_population = "unexposed",
-  intervention = "full_contrast",
-  measure = "life_year_change",
-  B = 50, method = "normal", show_progress = FALSE, use_future = FALSE,
-  id_var = "id", time_var = "period", event_var = "event",
-  exposure_var = "hypertension",
-  reference_level = "No", exposed_level = "Yes",
-  age_at_entry_var = "age",
-  age_start = 50, age_end = 90, age_interval = 5,
-  confounders_baseline = c("sex", "education_years", "bmi", "smoke_binary")
-)
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  print(plot_yll(result) + ggplot2::labs(title = "YLL in the selected population"))
+  print(plot_survival(result, age_start = 50) + ggplot2::theme_bw())
+}
 ```
 
-With `measure = "life_year_change"`, an ATC-like harmful change is
-reported as a negative value.
-
-## Partial-change policies
-
-`intervention = "partial_change"` compares the natural observed exposure
-distribution with a policy-like change in which only a specified
-fraction changes exposure state. In statistical terminology this is a
-stochastic intervention, but the API uses clinical policy language.
-
-Example: 30% of observed-exposed individuals move to the reference
-level, averaged over observed-exposed individuals.
+![](getting-started_files/figure-html/plots-1.png)![](getting-started_files/figure-html/plots-2.png)
 
 ``` r
 
-res_quit <- estimand_yll(
-  data = yll_toy,
-  target_population = "exposed",
-  intervention = "partial_change",
-  change_from = "exposed",
-  change_to = "reference",
-  change_probability = 0.30,
-  measure = "life_year_change",
-  B = 50, show_progress = FALSE, use_future = FALSE,
-  id_var = "id", time_var = "period", event_var = "event",
-  exposure_var = "smoke_binary",
-  reference_level = "Never", exposed_level = "Current/Ever",
-  age_at_entry_var = "age",
-  age_start = 50, age_end = 90, age_interval = 5,
-  confounders_baseline = c("sex", "education_years", "bmi")
-)
+ggplot2::ggsave("yll.png", plot_yll(result), width = 6, height = 4, dpi = 300)
 ```
 
-## Visualisation
+With bootstrap results, the plots include pointwise intervals. Survival
+bands use the selected interval method and are clipped to zero and one.
+They are not simultaneous confidence bands across ages.
+
+## Inspect the complete result
+
+`summary` contains one row per starting age. `bootstrap_estimates` adds
+an `iteration` column to replicate estimates. `survival_curves` contains
+`starting_age`, `age`, `survival_reference`, and `survival_exposed`;
+`bootstrap_survival_curves` adds `iteration`. `meta` records settings,
+population sizes, successful replicate count, and failures.
+
+## Optional parallel bootstrap
 
 ``` r
 
-plot_yll_estimate(res_all)
-plot_conditional_survival(res_all, age_start = 60)
-plot_marginal_survival(res_all)
+future::plan(future::multisession, workers = 2)
+# Use use_future = TRUE in estimate_yll().
+future::plan(future::sequential)
 ```
 
-## Result object
-
-`summary` contains one row per starting age and includes the selected
-`estimate`, confidence interval, `target_population`, `intervention`,
-and `measure`. `detailed_results` additionally keeps the original `yll`,
-life-year change, and arm-specific life expectancies for checking.
+The package uses the caller’s future plan and progressr handlers. It
+does not start a worker pool or change global progress handlers. Random
+state is restored after estimation. Repeating a call with the same seed
+and backend is reproducible; sequential and future backends can use
+different random streams.

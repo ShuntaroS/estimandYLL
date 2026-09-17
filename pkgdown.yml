@@ -1,12 +1,13 @@
 pandoc: 3.8.3
-pkgdown: 2.2.0
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
+  comparison-models: comparison-models.html
   getting-started-ja: getting-started-ja.html
   getting-started: getting-started.html
-  interventional-effects-ja: interventional-effects-ja.html
-  interventional-effects: interventional-effects.html
-last_built: 2026-06-11T06:50Z
+  migration: migration.html
+  target-populations: target-populations.html
+last_built: 2026-09-17T02:11Z
 urls:
   reference: https://shuntaros.github.io/estimandYLL/reference
   article: https://shuntaros.github.io/estimandYLL/articles

@@ -11,8 +11,8 @@
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Years of Life Lost via the G-Formula">
-<meta name="description" content="Estimates Years of Life Lost (YLL) and counterfactual life expectancy under user-specified interventions on a binary exposure using the parametric g-formula on the attained-age time scale. The main interface makes the target population, intervention, and result measure explicit, with bootstrap confidence intervals and helpers for plotting conditional and marginal survival curves.">
-<meta property="og:description" content="Estimates Years of Life Lost (YLL) and counterfactual life expectancy under user-specified interventions on a binary exposure using the parametric g-formula on the attained-age time scale. The main interface makes the target population, intervention, and result measure explicit, with bootstrap confidence intervals and helpers for plotting conditional and marginal survival curves.">
+<meta name="description" content="Estimates years of life lost as the difference in restricted expected residual lifetime between two binary exposure scenarios on the attained-age scale. A pooled logistic parametric g-formula standardizes individual conditional survival curves over an explicitly selected baseline population. Includes Poisson and Royston-Parmar model comparators, participant bootstrap confidence intervals, and plotting helpers.">
+<meta property="og:description" content="Estimates years of life lost as the difference in restricted expected residual lifetime between two binary exposure scenarios on the attained-age scale. A pooled logistic parametric g-formula standardizes individual conditional survival curves over an explicitly selected baseline population. Includes Poisson and Royston-Parmar model comparators, participant bootstrap confidence intervals, and plotting helpers.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">estimandYLL</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -35,12 +35,14 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="articles/getting-started-ja.html">estimandYLL 入門</a></li>
-    <li><a class="dropdown-item" href="articles/getting-started.html">Getting started with estimandYLL</a></li>
-    <li><a class="dropdown-item" href="articles/interventional-effects-ja.html">estimandYLL における interventional effects</a></li>
-    <li><a class="dropdown-item" href="articles/interventional-effects.html">Interventional effects with estimandYLL</a></li>
+<li><a class="dropdown-item" href="articles/getting-started.html">Getting started with estimandYLL</a></li>
+    <li><a class="dropdown-item" href="articles/target-populations.html">Target populations and interpretation</a></li>
+    <li><a class="dropdown-item" href="articles/comparison-models.html">Poisson and Royston-Parmar comparison models</a></li>
+    <li><a class="dropdown-item" href="articles/migration.html">Migrating from the development API</a></li>
+    <li><a class="dropdown-item" href="articles/getting-started-ja.html">estimandYLL 入門</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -57,405 +59,119 @@
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header"><h1 id="estimandyll">estimandYLL<a class="anchor" aria-label="anchor" href="#estimandyll"></a>
 </h1></div>
-<!-- badges: start -->
-
-<p>Years of life lost (YLL) and counterfactual life expectancy under user-specified interventions on a binary exposure, estimated with the parametric <strong>g-formula</strong> on the attained-age time scale.</p>
-<p>The package supports:</p>
-<ul>
-<li>Explicit target populations: all individuals, observed-exposed individuals, or observed-unexposed individuals.</li>
-<li>Full exposure contrasts and clinically phrased partial-change policies through one main function, <code><a href="reference/estimand_yll.html">estimand_yll()</a></code>.</li>
-<li>Conditional, observed-group YLL by Poisson or Royston-Parmar regression through <code><a href="reference/conditional_yll.html">conditional_yll()</a></code>.</li>
-<li>Bootstrap confidence intervals (normal-approximation or percentile), optionally parallelised with <code>future</code>.</li>
-<li>Plotting helpers for marginal and conditional survival curves and for the selected YLL measure across starting ages.</li>
-</ul>
+<p><a href="https://github.com/ShuntaroS/estimandYLL/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/ShuntaroS/estimandYLL/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://github.com/ShuntaroS/estimandYLL/actions/workflows/pkgdown.yaml" class="external-link"><img src="https://github.com/ShuntaroS/estimandYLL/actions/workflows/pkgdown.yaml/badge.svg" alt="pkgdown"></a></p>
+<p>Estimate <strong>years of life lost (YLL)</strong> between two binary exposure scenarios, for a stated baseline population and age window.</p>
+<p><strong>YLL = ERL under the reference level − ERL under the exposed level.</strong> ERL is expected residual lifetime restricted at the upper age. The contrast has the same direction for every target population; the interpretation changes with the population being studied.</p>
 <div class="section level2">
-<h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
+<h2 id="install">Install<a class="anchor" aria-label="anchor" href="#install"></a>
 </h2>
-<p>Documentation is available in this repository:</p>
-<ul>
-<li><a href="https://github.com/ShuntaroS/estimandYLL/tree/main/man" class="external-link">Function reference</a></li>
-<li><a href="https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/getting-started.Rmd" class="external-link">Getting started</a></li>
-<li><a href="https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/interventional-effects.Rmd" class="external-link">Generalized interventional effects</a></li>
-<li><a href="https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/getting-started-ja.Rmd" class="external-link">estimandYLL 入門</a></li>
-<li><a href="https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/interventional-effects-ja.Rmd" class="external-link">interventional effects 日本語版</a></li>
-</ul>
-</div>
-<div class="section level2">
-<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
-</h2>
-<p>The package is currently distributed from GitHub:</p>
+<p>Version 0.1.0 is distributed from GitHub. It has not been submitted to CRAN.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"remotes"</span><span class="op">)</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"ShuntaroS/estimandYLL"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
+<h2 id="first-estimate">First estimate<a class="anchor" aria-label="anchor" href="#first-estimate"></a>
 </h2>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/ShuntaroS/estimandYLL" class="external-link">estimandYLL</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">yll_toy</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/estimand_yll.html">estimand_yll</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">yll_toy</span>,</span>
-<span>  id_var <span class="op">=</span> <span class="st">"id"</span>,</span>
-<span>  time_var <span class="op">=</span> <span class="st">"period"</span>,</span>
-<span>  event_var <span class="op">=</span> <span class="st">"event"</span>,</span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/estimate_yll.html">estimate_yll</a></span><span class="op">(</span></span>
+<span>  data <span class="op">=</span> <span class="va">yll_toy</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">500</span>, <span class="op">]</span>,</span>
+<span>  time_var <span class="op">=</span> <span class="st">"period"</span>, event_var <span class="op">=</span> <span class="st">"event"</span>,</span>
 <span>  exposure_var <span class="op">=</span> <span class="st">"hypertension"</span>,</span>
-<span>  reference_level <span class="op">=</span> <span class="st">"No"</span>,</span>
-<span>  exposed_level <span class="op">=</span> <span class="st">"Yes"</span>,</span>
-<span>  age_at_entry_var <span class="op">=</span> <span class="st">"age"</span>,</span>
-<span>  target_population <span class="op">=</span> <span class="st">"all"</span>,</span>
-<span>  intervention <span class="op">=</span> <span class="st">"full_contrast"</span>,</span>
-<span>  measure <span class="op">=</span> <span class="st">"yll"</span>,</span>
-<span>  age_start <span class="op">=</span> <span class="fl">50</span>,</span>
-<span>  age_end <span class="op">=</span> <span class="fl">90</span>,</span>
-<span>  age_interval <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>  confounders_baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"education_years"</span>, <span class="st">"bmi"</span>, <span class="st">"smoke_binary"</span><span class="op">)</span>,</span>
-<span>  B <span class="op">=</span> <span class="fl">200</span>,</span>
-<span>  method <span class="op">=</span> <span class="st">"normal"</span>,</span>
-<span>  use_future <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  reference_level <span class="op">=</span> <span class="st">"No"</span>, exposed_level <span class="op">=</span> <span class="st">"Yes"</span>,</span>
+<span>  age_at_entry_var <span class="op">=</span> <span class="st">"age"</span>, target_population <span class="op">=</span> <span class="st">"unexposed"</span>,</span>
+<span>  age_start <span class="op">=</span> <span class="fl">50</span>, age_end <span class="op">=</span> <span class="fl">70</span>, age_interval <span class="op">=</span> <span class="fl">10</span>,</span>
+<span>  confounders_baseline <span class="op">=</span> <span class="st">"sex"</span>, B <span class="op">=</span> <span class="fl">0</span>, use_future <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">res</span><span class="op">$</span><span class="va">summary</span></span>
-<span><span class="fu"><a href="reference/plot_yll_estimate.html">plot_yll_estimate</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span></code></pre></div>
-<p>See <code><a href="articles/getting-started.html">vignette("getting-started", package = "estimandYLL")</a></code> for a tour of the user-facing function and the estimand definition.</p>
+<span><span class="va">result</span><span class="op">$</span><span class="va">summary</span></span></code></pre></div>
+<p>This quick example uses 500 simulated people and skips confidence intervals. For an analysis, choose the age window, covariates and target population for your question, and use an adequate number of bootstrap replicates, for example <code>B = 2000</code>. The data are synthetic; this example does not reproduce the paper’s cohort results. No real participant records are distributed.</p>
+<p><code>age_end</code> limits every integral. <code>age_interval</code> controls the spacing between reported starting ages; the main estimator still integrates on a one-year grid.</p>
 </div>
 <div class="section level2">
-<h2 id="result-object">Result object<a class="anchor" aria-label="anchor" href="#result-object"></a>
+<h2 id="what-to-specify">What to specify<a class="anchor" aria-label="anchor" href="#what-to-specify"></a>
 </h2>
-<p><code><a href="reference/estimand_yll.html">estimand_yll()</a></code> returns a list with:</p>
 <table class="table">
 <colgroup>
-<col width="25%">
-<col width="74%">
+<col width="50%">
+<col width="50%">
 </colgroup>
 <thead><tr>
-<th>Element</th>
-<th>Description</th>
+<th>Argument</th>
+<th>Meaning</th>
 </tr></thead>
 <tbody>
 <tr>
-<td><code>summary</code></td>
-<td>One row per starting age: selected estimate, CI, measure, and CI method.</td>
+<td><code>target_population = "all"</code></td>
+<td>Average over all participants (ATE).</td>
 </tr>
 <tr>
-<td><code>detailed_results</code></td>
-<td>Same plus per-arm life expectancy and both percentile and normal CIs.</td>
+<td><code>target_population = "exposed"</code></td>
+<td>Average over those observed exposed (ATT).</td>
 </tr>
 <tr>
-<td><code>meta</code></td>
-<td>Call metadata (<code>B</code>, <code>seed</code>, <code>conf_level</code>, <code>target_population</code>, <code>intervention</code>, <code>measure</code>, …).</td>
+<td><code>target_population = "unexposed"</code></td>
+<td>Average over those observed unexposed (ATU).</td>
 </tr>
 <tr>
-<td><code>marginal_survival_point</code></td>
-<td>Population-level marginal survival curves under each intervention arm.</td>
+<td>
+<code>reference_level</code>, <code>exposed_level</code>
+</td>
+<td>Observed values corresponding to x = 0 and x = 1.</td>
 </tr>
 <tr>
-<td><code>marginal_survival_boot</code></td>
-<td>Same, one row per bootstrap iteration (used by the plotting helpers).</td>
+<td><code>ci_method = "normal"</code></td>
+<td>Bootstrap standard error with a normal approximation (default).</td>
+</tr>
+<tr>
+<td><code>ci_method = "percentile"</code></td>
+<td>Quantiles of the same participant bootstrap distribution.</td>
 </tr>
 </tbody>
 </table>
-<p><code>method</code> selects between normal-approximation (<code>"normal"</code>, default) and percentile (<code>"percentile"</code>) bootstrap CIs; <code>res$summary$ci_method</code> records which one was used.</p>
+<p>The target population is required. Both interval methods resample people with replacement. Neither changes the fitted mortality model. Intervals are pointwise.</p>
 </div>
 <div class="section level2">
-<h2 id="estimand-at-a-glance">Estimand at a glance<a class="anchor" aria-label="anchor" href="#estimand-at-a-glance"></a>
+<h2 id="results-and-plots">Results and plots<a class="anchor" aria-label="anchor" href="#results-and-plots"></a>
 </h2>
-<p>The main design is:</p>
-<pre class="text"><code>YLL estimand = target_population + intervention + measure</code></pre>
-<p><code>target_population</code> answers “who are we averaging over?”:</p>
+<p><code>result$summary</code> contains <code>starting_age</code>, <code>erl_reference</code>, <code>erl_exposed</code>, <code>yll</code>, <code>yll_se</code>, <code>ci_low</code> and <code>ci_high</code>. Lifetimes, their difference and uncertainty are measured in years. The remaining elements are <code>bootstrap_estimates</code>, <code>survival_curves</code>, <code>bootstrap_survival_curves</code>, and <code>meta</code>.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/plot_yll.html">plot_yll</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"YLL among participants without hypertension"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/plot_survival.html">plot_survival</a></span><span class="op">(</span><span class="va">result</span>, age_start <span class="op">=</span> <span class="fl">50</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_bw</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># ggsave("yll.png", plot_yll(result), width = 6, height = 4, dpi = 300)</span></span></code></pre></div>
+<p>All plots are editable ggplot objects. The optional ggplot2 package is needed only for plotting. Poisson and Royston-Parmar comparators are available through <code><a href="reference/estimate_yll_poisson.html">estimate_yll_poisson()</a></code> and <code><a href="reference/estimate_yll_royston_parmar.html">estimate_yll_royston_parmar()</a></code>; they standardize over the full sample. The latter requires the optional rstpm2 package.</p>
+</div>
+<div class="section level2">
+<h2 id="read-the-documentation">Read the documentation<a class="anchor" aria-label="anchor" href="#read-the-documentation"></a>
+</h2>
 <ul>
-<li>
-<code>"all"</code>: all individuals (ATE-like).</li>
-<li>
-<code>"exposed"</code>: individuals observed exposed (ATT-like).</li>
-<li>
-<code>"unexposed"</code>: individuals observed unexposed (ATC-like).</li>
-</ul>
-<p><code>intervention</code> answers “what exposure worlds are compared?”:</p>
-<ul>
-<li>
-<code>"full_contrast"</code>: all reference versus all exposed.</li>
-<li>
-<code>"partial_change"</code>: the natural observed distribution versus a policy-like partial change, such as 30% of observed-exposed individuals moving to the reference level.</li>
-</ul>
-<p><code>measure</code> answers “how is the result displayed?”:</p>
-<ul>
-<li>
-<code>"yll"</code>: <code>LE_reference - LE_exposed</code>.</li>
-<li>
-<code>"life_year_change"</code>: the clinically oriented change in life expectancy for the stated intervention direction. This makes harmful ATC-like changes negative.</li>
-</ul>
-<p>Example: 30% of smokers quit, averaged over observed smokers:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/estimand_yll.html">estimand_yll</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">yll_toy</span>,</span>
-<span>  id_var <span class="op">=</span> <span class="st">"id"</span>,</span>
-<span>  time_var <span class="op">=</span> <span class="st">"period"</span>,</span>
-<span>  event_var <span class="op">=</span> <span class="st">"event"</span>,</span>
-<span>  exposure_var <span class="op">=</span> <span class="st">"smoke_binary"</span>,</span>
-<span>  reference_level <span class="op">=</span> <span class="st">"Never"</span>,</span>
-<span>  exposed_level <span class="op">=</span> <span class="st">"Current/Ever"</span>,</span>
-<span>  age_at_entry_var <span class="op">=</span> <span class="st">"age"</span>,</span>
-<span>  target_population <span class="op">=</span> <span class="st">"exposed"</span>,</span>
-<span>  intervention <span class="op">=</span> <span class="st">"partial_change"</span>,</span>
-<span>  change_from <span class="op">=</span> <span class="st">"exposed"</span>,</span>
-<span>  change_to <span class="op">=</span> <span class="st">"reference"</span>,</span>
-<span>  change_probability <span class="op">=</span> <span class="fl">0.30</span>,</span>
-<span>  measure <span class="op">=</span> <span class="st">"life_year_change"</span>,</span>
-<span>  B <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  use_future <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>In statistical terminology, <code>partial_change</code> is a stochastic intervention, but the user-facing API uses policy language.</p>
-<p>Plot helpers:</p>
-<ul>
-<li>
-<code><a href="reference/plot_yll_estimate.html">plot_yll_estimate()</a></code> / <code><a href="reference/plot_yll.html">plot_yll()</a></code> — selected estimate across starting ages.</li>
-<li>
-<code><a href="reference/plot_marginal_survival.html">plot_marginal_survival()</a></code> and <code><a href="reference/plot_conditional_survival.html">plot_conditional_survival()</a></code> — survival curves.</li>
+<li><a href="https://shuntaros.github.io/estimandYLL/articles/getting-started.html">Getting started</a></li>
+<li><a href="https://shuntaros.github.io/estimandYLL/articles/target-populations.html">Target populations and interpretation</a></li>
+<li><a href="https://shuntaros.github.io/estimandYLL/articles/comparison-models.html">Comparison models</a></li>
+<li><a href="https://shuntaros.github.io/estimandYLL/articles/migration.html">Migration from the development API</a></li>
+<li><a href="https://shuntaros.github.io/estimandYLL/articles/getting-started-ja.html">日本語の入門</a></li>
+<li><a href="https://shuntaros.github.io/estimandYLL/reference/index.html">Function reference</a></li>
 </ul>
 </div>
 <div class="section level2">
-<h2 id="conditional-yll">Conditional YLL<a class="anchor" aria-label="anchor" href="#conditional-yll"></a>
+<h2 id="interpretation-and-limitations">Interpretation and limitations<a class="anchor" aria-label="anchor" href="#interpretation-and-limitations"></a>
 </h2>
-<p><code><a href="reference/conditional_yll.html">conditional_yll()</a></code> implements regression-based observed-group comparisons similar to the Poisson and flexible parametric Royston-Parmar approaches used in the YLL methods literature. It is separate from <code><a href="reference/estimand_yll.html">estimand_yll()</a></code>: there is no intervention or target population argument. Instead, the function compares predicted remaining life expectancy for the reference and exposed groups, optionally conditioning on baseline covariates.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">res_cond</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/conditional_yll.html">conditional_yll</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">yll_toy</span>,</span>
-<span>  method <span class="op">=</span> <span class="st">"poisson"</span>,</span>
-<span>  id_var <span class="op">=</span> <span class="st">"id"</span>,</span>
-<span>  time_var <span class="op">=</span> <span class="st">"period"</span>,</span>
-<span>  event_var <span class="op">=</span> <span class="st">"event"</span>,</span>
-<span>  exposure_var <span class="op">=</span> <span class="st">"hypertension"</span>,</span>
-<span>  reference_level <span class="op">=</span> <span class="st">"No"</span>,</span>
-<span>  exposed_level <span class="op">=</span> <span class="st">"Yes"</span>,</span>
-<span>  age_at_entry_var <span class="op">=</span> <span class="st">"age"</span>,</span>
-<span>  confounders_baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"education_years"</span>, <span class="st">"bmi"</span>, <span class="st">"smoke_binary"</span><span class="op">)</span>,</span>
-<span>  age_start <span class="op">=</span> <span class="fl">50</span>,</span>
-<span>  age_end <span class="op">=</span> <span class="fl">90</span>,</span>
-<span>  age_interval <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>  B <span class="op">=</span> <span class="fl">0</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p><code>method = "flexible_parametric"</code> requires the optional <code>rstpm2</code> package.</p>
+<p>The model uses observed person-period records after cohort entry. At each starting age, individual survival curves are restarted at one and then averaged over the target population’s baseline covariates. This does not select only people observed alive at that age and is not a principal-stratum effect.</p>
+<p>A causal interpretation requires consistency, conditional exchangeability, positivity, appropriate censoring and entry assumptions, and an adequate model. The scenarios describe sustained exposure, not a change initiated at the starting age. Age extrapolation and sparse exposure-covariate combinations can make estimates sensitive to the model. Read the interpretation article before applying the package to an observational study.</p>
 </div>
 <div class="section level2">
-<h2 id="caveats">Caveats<a class="anchor" aria-label="anchor" href="#caveats"></a>
+<h2 id="development-and-validation">Development and validation<a class="anchor" aria-label="anchor" href="#development-and-validation"></a>
 </h2>
-<ul>
-<li>The current implementation is for <strong>binary</strong> exposures. Multi-level and continuous exposures are not yet supported.</li>
-<li>Variable entry age introduces a left-truncation / delayed-entry problem that the current implementation does not address rigorously; treat results from datasets with variable <code>age_at_entry_var</code> as preliminary.</li>
-</ul>
+<p>See <a href="NEWS.html">NEWS</a> for the breaking changes in 0.1.0 and <a href="https://github.com/ShuntaroS/estimandYLL/blob/main/notes/validation/README.md" class="external-link">the validation record</a> for the 100-replicate comparison with the previous development version. Source scripts are provided there.</p>
 </div>
 <div class="section level2">
 <h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>
 </h2>
 <p>MIT © 2026 Shuntaro Sato.</p>
-<hr>
 </div>
 </div>
-<div class="section level1">
-<h1 id="estimandyll-日本語版">estimandYLL 日本語版<a class="anchor" aria-label="anchor" href="#estimandyll-%E6%97%A5%E6%9C%AC%E8%AA%9E%E7%89%88"></a>
-</h1>
-<!-- badges: start -->
-
-<p><code>estimandYLL</code> は、二値曝露に対するユーザー指定の介入のもとで、 years of life lost (YLL) と反事実的な平均余命を推定する R package です。推定は到達年齢を時間軸とするパラメトリック <strong>g-formula</strong> に基づきます。</p>
-<p>この package は以下をサポートします。</p>
-<ul>
-<li>明示的な target population: 全対象者、観察上の曝露者、観察上の非曝露者。</li>
-<li>
-<code><a href="reference/estimand_yll.html">estimand_yll()</a></code> という1つの主関数による、完全な曝露コントラストと 臨床的に表現しやすい partial-change policy。</li>
-<li>
-<code><a href="reference/conditional_yll.html">conditional_yll()</a></code> による、Poisson 回帰または Royston-Parmar 回帰を用いた 条件付き・観察群比較の YLL。</li>
-<li>正規近似または percentile 法による bootstrap 信頼区間。 必要に応じて <code>future</code> による並列化も可能です。</li>
-<li>開始年齢ごとの YLL measure、marginal survival curve、 conditional survival curve の可視化関数。</li>
-</ul>
-<div class="section level2">
-<h2 id="ドキュメント">ドキュメント<a class="anchor" aria-label="anchor" href="#%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88"></a>
-</h2>
-<p>関数リファレンスと vignette は GitHub repository で確認できます。</p>
-<ul>
-<li><a href="https://github.com/ShuntaroS/estimandYLL/tree/main/man" class="external-link">Function reference</a></li>
-<li><a href="https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/getting-started.Rmd" class="external-link">Getting started</a></li>
-<li><a href="https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/interventional-effects.Rmd" class="external-link">Generalized interventional effects</a></li>
-<li><a href="https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/getting-started-ja.Rmd" class="external-link">estimandYLL 入門</a></li>
-<li><a href="https://github.com/ShuntaroS/estimandYLL/blob/main/vignettes/interventional-effects-ja.Rmd" class="external-link">interventional effects 日本語版</a></li>
-</ul>
-</div>
-<div class="section level2">
-<h2 id="インストール">インストール<a class="anchor" aria-label="anchor" href="#%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB"></a>
-</h2>
-<p>現在、この package は GitHub から配布しています。</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
-<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"ShuntaroS/estimandYLL"</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="quick-start-1">Quick start<a class="anchor" aria-label="anchor" href="#quick-start-1"></a>
-</h2>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/ShuntaroS/estimandYLL" class="external-link">estimandYLL</a></span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">yll_toy</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/estimand_yll.html">estimand_yll</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">yll_toy</span>,</span>
-<span>  id_var <span class="op">=</span> <span class="st">"id"</span>,</span>
-<span>  time_var <span class="op">=</span> <span class="st">"period"</span>,</span>
-<span>  event_var <span class="op">=</span> <span class="st">"event"</span>,</span>
-<span>  exposure_var <span class="op">=</span> <span class="st">"hypertension"</span>,</span>
-<span>  reference_level <span class="op">=</span> <span class="st">"No"</span>,</span>
-<span>  exposed_level <span class="op">=</span> <span class="st">"Yes"</span>,</span>
-<span>  age_at_entry_var <span class="op">=</span> <span class="st">"age"</span>,</span>
-<span>  target_population <span class="op">=</span> <span class="st">"all"</span>,</span>
-<span>  intervention <span class="op">=</span> <span class="st">"full_contrast"</span>,</span>
-<span>  measure <span class="op">=</span> <span class="st">"yll"</span>,</span>
-<span>  age_start <span class="op">=</span> <span class="fl">50</span>,</span>
-<span>  age_end <span class="op">=</span> <span class="fl">90</span>,</span>
-<span>  age_interval <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>  confounders_baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"education_years"</span>, <span class="st">"bmi"</span>, <span class="st">"smoke_binary"</span><span class="op">)</span>,</span>
-<span>  B <span class="op">=</span> <span class="fl">200</span>,</span>
-<span>  method <span class="op">=</span> <span class="st">"normal"</span>,</span>
-<span>  use_future <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">res</span><span class="op">$</span><span class="va">summary</span></span>
-<span><span class="fu"><a href="reference/plot_yll_estimate.html">plot_yll_estimate</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="reference/estimand_yll.html">estimand_yll()</a></code> の使い方と estimand の定義は、 <code><a href="articles/getting-started-ja.html">vignette("getting-started-ja", package = "estimandYLL")</a></code> でも確認できます。</p>
-</div>
-<div class="section level2">
-<h2 id="結果オブジェクト">結果オブジェクト<a class="anchor" aria-label="anchor" href="#%E7%B5%90%E6%9E%9C%E3%82%AA%E3%83%96%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88"></a>
-</h2>
-<p><code><a href="reference/estimand_yll.html">estimand_yll()</a></code> は以下を含む list を返します。</p>
-<table class="table">
-<colgroup>
-<col width="25%">
-<col width="74%">
-</colgroup>
-<thead><tr>
-<th>要素</th>
-<th>説明</th>
-</tr></thead>
-<tbody>
-<tr>
-<td><code>summary</code></td>
-<td>開始年齢ごとの推定値、信頼区間、measure、CI method。</td>
-</tr>
-<tr>
-<td><code>detailed_results</code></td>
-<td>
-<code>summary</code> に加えて、各 arm の平均余命と percentile / normal CI を保持します。</td>
-</tr>
-<tr>
-<td><code>meta</code></td>
-<td>
-<code>B</code>, <code>seed</code>, <code>conf_level</code>, <code>target_population</code>, <code>intervention</code>, <code>measure</code> などのメタ情報。</td>
-</tr>
-<tr>
-<td><code>marginal_survival_point</code></td>
-<td>各介入 arm の population-level marginal survival curve。</td>
-</tr>
-<tr>
-<td><code>marginal_survival_boot</code></td>
-<td>bootstrap iteration ごとの marginal survival curve。可視化関数で使います。</td>
-</tr>
-</tbody>
-</table>
-<p><code>method</code> は bootstrap CI の計算方法を指定します。既定値は正規近似 (<code>"normal"</code>) で、<code>"percentile"</code> も選べます。実際に使われた方法は <code>res$summary$ci_method</code> に記録されます。</p>
-</div>
-<div class="section level2">
-<h2 id="estimand-の考え方">Estimand の考え方<a class="anchor" aria-label="anchor" href="#estimand-%E3%81%AE%E8%80%83%E3%81%88%E6%96%B9"></a>
-</h2>
-<p>この package の中心は以下です。</p>
-<pre class="text"><code>YLL estimand = target_population + intervention + measure</code></pre>
-<p><code>target_population</code> は「誰で平均するか」を表します。</p>
-<ul>
-<li>
-<code>"all"</code>: 全対象者。ATE-like な target population。</li>
-<li>
-<code>"exposed"</code>: 観察上の曝露者。ATT-like な target population。</li>
-<li>
-<code>"unexposed"</code>: 観察上の非曝露者。ATC-like な target population。</li>
-</ul>
-<p><code>intervention</code> は「どの曝露世界を比較するか」を表します。</p>
-<ul>
-<li>
-<code>"full_contrast"</code>: 全員が reference である世界と、全員が exposed である世界を比較。</li>
-<li>
-<code>"partial_change"</code>: 自然な観察曝露分布と、一定割合だけ曝露状態が変わる policy-like な介入を比較。例えば、観察上の曝露者の30%が reference に移る場合など。</li>
-</ul>
-<p><code>measure</code> は「結果をどの向きで表示するか」を表します。</p>
-<ul>
-<li>
-<code>"yll"</code>: <code>LE_reference - LE_exposed</code>。</li>
-<li>
-<code>"life_year_change"</code>: 指定した介入方向に沿った、臨床的に解釈しやすい平均余命の変化。 有害曝露に対する ATC-like な変化では負の値になります。</li>
-</ul>
-<p>例: 観察上の喫煙者を target population として、その30%が禁煙する policy:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/estimand_yll.html">estimand_yll</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">yll_toy</span>,</span>
-<span>  id_var <span class="op">=</span> <span class="st">"id"</span>,</span>
-<span>  time_var <span class="op">=</span> <span class="st">"period"</span>,</span>
-<span>  event_var <span class="op">=</span> <span class="st">"event"</span>,</span>
-<span>  exposure_var <span class="op">=</span> <span class="st">"smoke_binary"</span>,</span>
-<span>  reference_level <span class="op">=</span> <span class="st">"Never"</span>,</span>
-<span>  exposed_level <span class="op">=</span> <span class="st">"Current/Ever"</span>,</span>
-<span>  age_at_entry_var <span class="op">=</span> <span class="st">"age"</span>,</span>
-<span>  target_population <span class="op">=</span> <span class="st">"exposed"</span>,</span>
-<span>  intervention <span class="op">=</span> <span class="st">"partial_change"</span>,</span>
-<span>  change_from <span class="op">=</span> <span class="st">"exposed"</span>,</span>
-<span>  change_to <span class="op">=</span> <span class="st">"reference"</span>,</span>
-<span>  change_probability <span class="op">=</span> <span class="fl">0.30</span>,</span>
-<span>  measure <span class="op">=</span> <span class="st">"life_year_change"</span>,</span>
-<span>  B <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  use_future <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>統計学的には <code>partial_change</code> は stochastic intervention に相当しますが、 ユーザー向け API では臨床的な policy language を使っています。</p>
-<p>可視化関数:</p>
-<ul>
-<li>
-<code><a href="reference/plot_yll_estimate.html">plot_yll_estimate()</a></code> / <code><a href="reference/plot_yll.html">plot_yll()</a></code>: 開始年齢ごとの選択された推定値。</li>
-<li>
-<code><a href="reference/plot_marginal_survival.html">plot_marginal_survival()</a></code> と <code><a href="reference/plot_conditional_survival.html">plot_conditional_survival()</a></code>: survival curve。</li>
-</ul>
-</div>
-<div class="section level2">
-<h2 id="conditional-yll-1">Conditional YLL<a class="anchor" aria-label="anchor" href="#conditional-yll-1"></a>
-</h2>
-<p><code><a href="reference/conditional_yll.html">conditional_yll()</a></code> は、YLL methods literature で使われている Poisson 回帰および flexible parametric Royston-Parmar approach に近い、 回帰ベースの観察群比較を実装します。これは <code><a href="reference/estimand_yll.html">estimand_yll()</a></code> とは別の関数です。 <code><a href="reference/conditional_yll.html">conditional_yll()</a></code> には intervention や target population の引数はありません。 代わりに、baseline covariates に条件づけたうえで、reference 群と exposed 群の 予測 remaining life expectancy を比較します。</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">res_cond</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/conditional_yll.html">conditional_yll</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">yll_toy</span>,</span>
-<span>  method <span class="op">=</span> <span class="st">"poisson"</span>,</span>
-<span>  id_var <span class="op">=</span> <span class="st">"id"</span>,</span>
-<span>  time_var <span class="op">=</span> <span class="st">"period"</span>,</span>
-<span>  event_var <span class="op">=</span> <span class="st">"event"</span>,</span>
-<span>  exposure_var <span class="op">=</span> <span class="st">"hypertension"</span>,</span>
-<span>  reference_level <span class="op">=</span> <span class="st">"No"</span>,</span>
-<span>  exposed_level <span class="op">=</span> <span class="st">"Yes"</span>,</span>
-<span>  age_at_entry_var <span class="op">=</span> <span class="st">"age"</span>,</span>
-<span>  confounders_baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"education_years"</span>, <span class="st">"bmi"</span>, <span class="st">"smoke_binary"</span><span class="op">)</span>,</span>
-<span>  age_start <span class="op">=</span> <span class="fl">50</span>,</span>
-<span>  age_end <span class="op">=</span> <span class="fl">90</span>,</span>
-<span>  age_interval <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>  B <span class="op">=</span> <span class="fl">0</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p><code>method = "flexible_parametric"</code> を使う場合は、optional package である <code>rstpm2</code> が必要です。</p>
-</div>
-<div class="section level2">
-<h2 id="注意点">注意点<a class="anchor" aria-label="anchor" href="#%E6%B3%A8%E6%84%8F%E7%82%B9"></a>
-</h2>
-<ul>
-<li>現在の実装は <strong>二値曝露</strong> を対象にしています。多値曝露や連続曝露にはまだ対応していません。</li>
-<li>entry age が対象者ごとに異なる場合、left truncation / delayed entry の問題が生じます。 現在の実装ではこの問題を厳密には扱っていないため、<code>age_at_entry_var</code> が大きく変動する データでの結果は予備的に解釈してください。</li>
-</ul>
-</div>
-<div class="section level2">
-<h2 id="license-1">License<a class="anchor" aria-label="anchor" href="#license-1"></a>
-</h2>
-<p>MIT © 2026 Shuntaro Sato.</p>
-</div>
-</div>
-
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
@@ -487,15 +203,7 @@
 </ul>
 </div>
 
-<div class="dev-status">
-<h2 data-toc-skip>Dev status</h2>
-<ul class="list-unstyled">
-<li><a href="https://github.com/ShuntaroS/estimandYLL/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/ShuntaroS/estimandYLL/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
-<li><a href="https://github.com/ShuntaroS/estimandYLL/actions/workflows/pkgdown.yaml" class="external-link"><img src="https://github.com/ShuntaroS/estimandYLL/actions/workflows/pkgdown.yaml/badge.svg" alt="pkgdown"></a></li>
-<li><a href="https://github.com/ShuntaroS/estimandYLL/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/ShuntaroS/estimandYLL/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
-<li><a href="https://github.com/ShuntaroS/estimandYLL/actions/workflows/pkgdown.yaml" class="external-link"><img src="https://github.com/ShuntaroS/estimandYLL/actions/workflows/pkgdown.yaml/badge.svg" alt="pkgdown"></a></li>
-</ul>
-</div>
+
 
   </aside>
 </div>
@@ -506,7 +214,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

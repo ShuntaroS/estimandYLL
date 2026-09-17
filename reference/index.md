@@ -1,27 +1,28 @@
 # Package index
 
-## Estimation
+## Main estimator
 
-Main function for estimating YLL.
+- [`estimate_yll()`](https://shuntaros.github.io/estimandYLL/reference/estimate_yll.md)
+  : Estimate years of life lost in a specified target population
 
-- [`estimand_yll()`](https://shuntaros.github.io/estimandYLL/reference/estimand_yll.md)
-  [`estimate_yll()`](https://shuntaros.github.io/estimandYLL/reference/estimand_yll.md)
-  : Estimate years of life lost from a clearly stated estimand
-- [`conditional_yll()`](https://shuntaros.github.io/estimandYLL/reference/conditional_yll.md)
-  : Estimate conditional years of life lost by regression methods
+## Comparison models
 
-## Plotting
+- [`estimate_yll_poisson()`](https://shuntaros.github.io/estimandYLL/reference/estimate_yll_poisson.md)
+  : Estimate standardized YLL using a Poisson model
+- [`estimate_yll_royston_parmar()`](https://shuntaros.github.io/estimandYLL/reference/estimate_yll_royston_parmar.md)
+  : Estimate standardized YLL using a Royston-Parmar model
 
-- [`plot_yll_estimate()`](https://shuntaros.github.io/estimandYLL/reference/plot_yll_estimate.md)
-  : Plot the selected YLL estimate across starting ages
+## Editable ggplot2 figures
+
 - [`plot_yll()`](https://shuntaros.github.io/estimandYLL/reference/plot_yll.md)
-  : Plot YLL across starting ages
-- [`plot_marginal_survival()`](https://shuntaros.github.io/estimandYLL/reference/plot_marginal_survival.md)
-  : Plot marginal survival curves for the two intervention arms
-- [`plot_conditional_survival()`](https://shuntaros.github.io/estimandYLL/reference/plot_conditional_survival.md)
-  : Plot the conditional survival probability from a starting age
+  : Plot years of life lost across starting ages
+- [`plot_survival()`](https://shuntaros.github.io/estimandYLL/reference/plot_survival.md)
+  : Plot standardized survival from a specified starting age
 
-## Data
+## Example data and package
 
 - [`yll_toy`](https://shuntaros.github.io/estimandYLL/reference/yll_toy.md)
   : Synthetic survival dataset for YLL examples
+- [`estimandYLL`](https://shuntaros.github.io/estimandYLL/reference/estimandYLL-package.md)
+  [`estimandYLL-package`](https://shuntaros.github.io/estimandYLL/reference/estimandYLL-package.md)
+  : estimandYLL: Years of Life Lost via the G-Formula

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">estimandYLL</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,11 +18,13 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/getting-started-ja.html">estimandYLL 入門</a></li>
-    <li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with estimandYLL</a></li>
-    <li><a class="dropdown-item" href="../articles/interventional-effects-ja.html">estimandYLL における interventional effects</a></li>
-    <li><a class="dropdown-item" href="../articles/interventional-effects.html">Interventional effects with estimandYLL</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with estimandYLL</a></li>
+    <li><a class="dropdown-item" href="../articles/target-populations.html">Target populations and interpretation</a></li>
+    <li><a class="dropdown-item" href="../articles/comparison-models.html">Poisson and Royston-Parmar comparison models</a></li>
+    <li><a class="dropdown-item" href="../articles/migration.html">Migrating from the development API</a></li>
+    <li><a class="dropdown-item" href="../articles/getting-started-ja.html">estimandYLL 入門</a></li>
   </ul></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://github.com/ShuntaroS/estimandYLL/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
@@ -38,9 +40,9 @@
     </div>
 
     <div class="section level2">
-      <h2 id="estimation">Estimation<a class="anchor" aria-label="anchor" href="#estimation"></a></h2>
+      <h2 id="main-estimator">Main estimator<a class="anchor" aria-label="anchor" href="#main-estimator"></a></h2>
 
-      <div class="section-desc"><p>Main function for estimating YLL.</p></div>
+
 
       <dl></dl></div><div class="section level2">
 
@@ -49,19 +51,12 @@
 
       <dl><dt>
 
-          <code><a href="estimand_yll.html">estimand_yll()</a></code> <code><a href="estimand_yll.html">estimate_yll()</a></code>
+          <code><a href="estimate_yll.html">estimate_yll()</a></code>
 
         </dt>
-        <dd>Estimate years of life lost from a clearly stated estimand</dd>
-
-        <dt>
-
-          <code><a href="conditional_yll.html">conditional_yll()</a></code>
-
-        </dt>
-        <dd>Estimate conditional years of life lost by regression methods</dd>
+        <dd>Estimate years of life lost in a specified target population</dd>
       </dl></div><div class="section level2">
-      <h2 id="plotting">Plotting<a class="anchor" aria-label="anchor" href="#plotting"></a></h2>
+      <h2 id="comparison-models">Comparison models<a class="anchor" aria-label="anchor" href="#comparison-models"></a></h2>
 
 
 
@@ -72,33 +67,42 @@
 
       <dl><dt>
 
-          <code><a href="plot_yll_estimate.html">plot_yll_estimate()</a></code>
+          <code><a href="estimate_yll_poisson.html">estimate_yll_poisson()</a></code>
 
         </dt>
-        <dd>Plot the selected YLL estimate across starting ages</dd>
+        <dd>Estimate standardized YLL using a Poisson model</dd>
 
         <dt>
+
+          <code><a href="estimate_yll_royston_parmar.html">estimate_yll_royston_parmar()</a></code>
+
+        </dt>
+        <dd>Estimate standardized YLL using a Royston-Parmar model</dd>
+      </dl></div><div class="section level2">
+      <h2 id="editable-ggplot-figures">Editable ggplot2 figures<a class="anchor" aria-label="anchor" href="#editable-ggplot-figures"></a></h2>
+
+
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
 
           <code><a href="plot_yll.html">plot_yll()</a></code>
 
         </dt>
-        <dd>Plot YLL across starting ages</dd>
+        <dd>Plot years of life lost across starting ages</dd>
 
         <dt>
 
-          <code><a href="plot_marginal_survival.html">plot_marginal_survival()</a></code>
+          <code><a href="plot_survival.html">plot_survival()</a></code>
 
         </dt>
-        <dd>Plot marginal survival curves for the two intervention arms</dd>
-
-        <dt>
-
-          <code><a href="plot_conditional_survival.html">plot_conditional_survival()</a></code>
-
-        </dt>
-        <dd>Plot the conditional survival probability from a starting age</dd>
+        <dd>Plot standardized survival from a specified starting age</dd>
       </dl></div><div class="section level2">
-      <h2 id="data">Data<a class="anchor" aria-label="anchor" href="#data"></a></h2>
+      <h2 id="example-data-and-package">Example data and package<a class="anchor" aria-label="anchor" href="#example-data-and-package"></a></h2>
 
 
 
@@ -113,6 +117,13 @@
 
         </dt>
         <dd>Synthetic survival dataset for YLL examples</dd>
+
+        <dt>
+
+          <code><a href="estimandYLL-package.html">estimandYLL</a></code> <code><a href="estimandYLL-package.html">estimandYLL-package</a></code>
+
+        </dt>
+        <dd>estimandYLL: Years of Life Lost via the G-Formula</dd>
       </dl></div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
@@ -123,7 +134,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

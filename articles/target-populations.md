@@ -1,0 +1,80 @@
+# Target populations and interpretation
+
+## One contrast, three populations
+
+Write the contrast as
+
+``` math
+\mathrm{YLL}(a,\tau\mid P) = \mathrm{ERL}^{x=0}(a,\tau\mid P)
+- \mathrm{ERL}^{x=1}(a,\tau\mid P).
+```
+
+The reference level corresponds to x = 0 and the exposed level to x = 1.
+Neither label guarantees which scenario is harmful: negative estimates
+remain negative. The sign is never changed by the population argument.
+
+| Target population | Conventional name | Meaning of a positive YLL when exposure is harmful |
+|----|----|----|
+| `"all"` | Average treatment effect (ATE) | Reference-minus-exposed difference over the full sample. |
+| `"exposed"` | Average treatment effect on the treated (ATT) | Years the exposed population would gain under the reference scenario. |
+| `"unexposed"` | Average treatment effect on the untreated (ATU) | Years the unexposed population would lose under the exposed scenario. |
+
+The same fitted hazards are used for each choice. Only the covariate
+distribution used for averaging changes. Do not subset to the target
+population before calling the estimator: both exposure levels are needed
+to fit the model.
+
+## Conditioning precedes standardization
+
+For each person and starting age, survival is constructed from the
+predicted annual hazards and begins at one. Those individual curves are
+then averaged over the selected baseline population. Averaging first and
+dividing by the population survival at the starting age would change the
+covariate weights and would estimate a different quantity.
+
+Every target-population member contributes at every starting age,
+irrespective of entry age. This is a standardized period interpretation
+using estimated age-specific mortality, not a prediction for a
+particular birth cohort or the observed survivors alone. It does not
+assume the same people would survive to the starting age under both
+exposure scenarios.
+
+## Age and exposure scenarios are part of the question
+
+`age_start`, `age_end`, and `age_interval` define the reporting
+sequence; `age_end` also defines the common upper limit of the
+integrals. The main method uses a one-year prediction and integration
+grid. The default left-rectangle rule sums survival at the start of each
+interval. Trapezoidal integration is available as a numerical option; it
+is not the paper’s default.
+
+The scenarios hold baseline exposure fixed. For example, comparing never
+smoking with sustained smoking does not directly estimate cessation
+begun at age 60. Earlier exposure history can affect the later mortality
+trajectory.
+
+## Identification and observation assumptions
+
+Causal interpretation requires consistency of the exposure scenarios, no
+interference, conditional exchangeability given the measured baseline
+covariates, and positivity of the two exposure levels where needed in
+the target population. Censoring must be independent of survival
+conditional on the modeled variables. Cohort entry must not select
+people with different subsequent mortality after conditioning on
+exposure and covariates. Correct hazard model specification is also
+required.
+
+Only observed intervals after cohort entry enter the model fit.
+Standardized predictions can nevertheless extend to ages or covariate
+combinations with little or no observed support. Combining mortality
+across ages assumes sufficient comparability across the represented
+birth cohorts and calendar periods. Neither fitting a model nor choosing
+an upper age establishes these assumptions.
+
+## A reporting checklist
+
+Report the baseline target population, both exposure levels, starting
+and upper ages, adjustment covariates, model and integration rule,
+bootstrap settings, missing-data exclusions, and any fitting failures or
+extrapolation. Report the YLL together with its direction and
+population-specific interpretation.
