@@ -22,24 +22,38 @@ library(estimandYLL)
 `"exposed"` は観察時の曝露者、`"unexposed"` は観察時の非曝露者です。
 モデルは全解析対象者で推定し、予測した生存曲線を平均する集団だけを変えます。
 
-```{r estimate-ja}
+```{r estimate-ja, eval=FALSE}
 data(yll_toy)
+previous_plan <- future::plan(future::multisession, workers = 2)
 result <- estimate_yll(
-  data = yll_toy[1:500, ],
+  data = yll_toy,
   time_var = "period", event_var = "event",
   exposure_var = "hypertension",
   reference_level = "No", exposed_level = "Yes",
   age_at_entry_var = "age", target_population = "unexposed",
-  age_start = 50, age_end = 70, age_interval = 10,
-  confounders_baseline = "sex", B = 0, use_future = FALSE
+  age_start = 40, age_end = 90, age_interval = 5,
+  confounders_baseline = c("sex", "education_years", "bmi", "smoke_binary"),
+  B = 1000, seed = 20260917, ci_method = "normal", use_future = TRUE
 )
-result$summary
+future::plan(previous_plan)
 ```
 
-この例では、合成データの500人を使い、高血圧のない人を対象集団とします。
-50歳・60歳・70歳から70歳までの結果を1回の呼び出しで計算します。
+この例では、合成データの5,000人全員を使い、高血圧のない人を対象集団とします。
+ブートストラップは1,000回です。40歳から90歳まで、5歳刻みの開始年齢について、
+90歳までの YLL と95%信頼区間を計算します。
+
+上の計算は実行済みです。図を描くたびに1,000回の推定を繰り返す必要がないよう、
+結果をパッケージに同梱しています。この入門記事の表と図も、次の保存済み結果から作っています。
+[再実行用スクリプト](https://github.com/ShuntaroS/estimandYLL/tree/main/notes/published-example)
+も公開しています。
+
+```{r saved-result-ja}
+result <- readRDS(system.file("extdata", "yll-example.rds", package = "estimandYLL"))
+knitr::kable(result$summary, digits = 2)
+```
+
 `age_interval` は結果を表示する開始年齢の間隔であり、主推定法の計算は1年刻みです。
-開始年齢が上限年齢と同じなら、ERL と YLL は0になります。
+開始年齢が上限の90歳と同じなら、積分する区間がないため ERL と YLL は0になります。
 
 ## 推定値を解釈します
 
@@ -54,21 +68,40 @@ ERL、`yll` がその差、`yll_se` が標準誤差、`ci_low` と `ci_high` が
 
 ## 信頼区間と図を確認します
 
-`B = 0` は点推定だけを計算する指定です。実際の解析では、例えば `B = 2000`
-として個人単位のブートストラップを行います。`ci_method = "normal"` は
+この公開例では `B = 1000` として個人単位のブートストラップを行いました。
+`ci_method = "normal"` は
 標準誤差を用いる正規近似、`"percentile"` は反復推定値の分位点による区間です。
 どちらも個人を復元抽出するノンパラメトリック・ブートストラップです。
 区間は年齢ごとのもので、曲線全体を同時に覆う信頼帯ではありません。
+`B = 0` と指定すると点推定だけを計算するため、図にも信頼区間は表示されません。
 
 ```{r plots-ja}
 if (requireNamespace("ggplot2", quietly = TRUE)) {
-  print(plot_yll(result) + ggplot2::theme_bw())
+  print(plot_yll(result, conf_band = TRUE) + ggplot2::theme_bw())
   print(plot_survival(result, age_start = 50))
 }
 ```
 
+YLL の図は、5歳刻みの点推定と95%信頼区間をエラーバーで表示します。
+生存曲線の図は、同じ1,000反復から求めた95%信頼区間を帯で表示します。
+
 返り値は編集可能な `ggplot` オブジェクトです。`+ ggplot2::labs()` でラベルを、
 `+ ggplot2::theme()` で外観を変更し、`ggplot2::ggsave()` で保存できます。
+
+```{r save-plot-ja, eval=FALSE}
+ggplot2::ggsave("yll.png", plot_yll(result), width = 6, height = 4, dpi = 300)
+```
+
+## future による並列実行を使います
+
+主関数 `estimate_yll()` は `use_future = TRUE` が既定です。
+実際の並列化は、呼び出す側で指定した `future::plan()` に従います。
+上の例では `multisession` で2つの R ワーカーを起動し、計算後に元の設定に戻しています。
+`use_future = TRUE` だけではワーカーは起動しません。
+Poisson 法と Royston–Parmar 法の比較用関数は、現在は逐次実行です。
+
+同じシードと同じ実行方式で繰り返した結果には再現性があります。
+`future` を使わない逐次実行と `future` を使う実行とでは、乱数列が異なる場合があります。
 
 ## 解析時の前提を確認します
 

@@ -19,7 +19,7 @@ documentation build failure. Examples, tests, vignettes and the PDF manual pass.
 GitHub Actions checks passed on macOS (release), Windows (release), and Linux
 (release, oldrel-1, devel). The workflow checks examples, tests and vignettes.
 The pkgdown site is published through GitHub Pages. Its rendered text and plots
-were inspected, and all 27 internal page/image URLs returned HTTP 200.
+were inspected, and internal page/image links were checked for successful responses.
 
 Workflow records: https://github.com/ShuntaroS/estimandYLL/actions
 Documentation: https://shuntaros.github.io/estimandYLL/
@@ -32,6 +32,13 @@ Point estimates and point survival curves match for all five settings. Main
 method and Poisson intervals agree to floating-point precision. Normal and
 percentile intervals were checked for the main method.
 
+The published main-method example separately uses 1,000 bootstrap replicates
+with two future workers and five-year starting-age intervals. All 1,000
+replicates succeeded without impossible-ERL flags. A four-replicate check
+confirmed identical estimates, curves and intervals on repeated two-worker
+runs and on the sequential future backend. Reproduction scripts are in
+notes/published-example/ on GitHub.
+
 The Royston-Parmar comparator is numerically unstable on this validation dataset
 in both versions: the same seven of 100 replicates fail, and some other replicates
 produce impossible lifetimes. Its raw results are preserved and explicitly
@@ -41,7 +48,10 @@ GitHub, excluded from the CRAN source tarball.
 
 ## Runtime and optional dependencies
 
-Examples use small synthetic subsets and no bootstrap. Long known-model tests
+Estimation examples use small synthetic subsets and no bootstrap. Plotting
+examples and the introductory vignettes load a saved synthetic result with
+1,000 bootstrap replicates and five-year starting-age intervals; the fit is not
+repeated during checks. Long known-model tests
 are skipped on CRAN; small tests exercise all three estimators when optional
 rstpm2 is available. ggplot2 and rstpm2 are optional dependencies. No network
 access is required to estimate, test, or build the vignettes. Parallel workers

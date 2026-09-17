@@ -25,23 +25,39 @@ remotes::install_github("ShuntaroS/estimandYLL")
 ```r
 library(estimandYLL)
 data(yll_toy)
+previous_plan <- future::plan(future::multisession, workers = 2)
 result <- estimate_yll(
-  data = yll_toy[1:500, ],
+  data = yll_toy,
   time_var = "period", event_var = "event",
   exposure_var = "hypertension",
   reference_level = "No", exposed_level = "Yes",
   age_at_entry_var = "age", target_population = "unexposed",
-  age_start = 50, age_end = 70, age_interval = 10,
-  confounders_baseline = "sex", B = 0, use_future = FALSE
+  age_start = 40, age_end = 90, age_interval = 5,
+  confounders_baseline = c("sex", "education_years", "bmi", "smoke_binary"),
+  B = 1000, seed = 20260917, ci_method = "normal", use_future = TRUE
 )
+future::plan(previous_plan)
 result$summary
 ```
 
-This quick example uses 500 simulated people and skips confidence intervals.
-For an analysis, choose the age window, covariates and target population for
-your question, and use an adequate number of bootstrap replicates, for example
-`B = 2000`. The data are synthetic; this example does not reproduce the paper's
-cohort results. No real participant records are distributed.
+This example uses all 5,000 simulated people, 1,000 participant bootstrap
+replicates, and starting ages from 40 to 90 in five-year steps. The figures below
+include 95% pointwise confidence intervals. The data are synthetic; this example
+does not reproduce the paper's cohort results. No real participant records are
+distributed. Choose the age window, covariates, target population, and number of
+replicates for your own analysis.
+
+The main estimator uses the caller's `future` plan when `use_future = TRUE`
+(the default). The code above requests two separate R workers and then restores
+the previous plan. Merely setting `use_future = TRUE` does not start workers.
+
+To inspect the published figures without rerunning the bootstrap, load the
+saved result included with the package. The full reproduction script is in
+[notes/published-example](https://github.com/ShuntaroS/estimandYLL/tree/main/notes/published-example).
+
+```r
+result <- readRDS(system.file("extdata", "yll-example.rds", package = "estimandYLL"))
+```
 
 `age_end` limits every integral. `age_interval` controls the spacing between
 reported starting ages; the main estimator still integrates on a one-year grid.
@@ -69,10 +85,22 @@ are measured in years. The remaining elements are `bootstrap_estimates`,
 
 ```r
 library(ggplot2)
-plot_yll(result) + labs(title = "YLL among participants without hypertension")
+plot_yll(result, conf_band = TRUE) +
+  labs(title = "YLL among participants without hypertension")
 plot_survival(result, age_start = 50) + theme_bw()
 # ggsave("yll.png", plot_yll(result), width = 6, height = 4, dpi = 300)
 ```
+
+![YLL with 95% pointwise confidence intervals from 1,000 bootstrap replicates](man/figures/yll-example.png)
+
+Points show YLL and error bars show 95% confidence intervals, at five-year
+starting-age intervals. At age 90 the integration window is empty, so YLL and
+its interval are zero.
+
+![Standardized survival from age 50 with 95% pointwise confidence intervals](man/figures/survival-example.png)
+
+Survival is restarted at one at age 50. Shaded areas show 95% pointwise
+confidence intervals for each exposure scenario.
 
 All plots are editable ggplot objects. The optional ggplot2 package is needed
 only for plotting. Poisson and Royston-Parmar comparators are available through

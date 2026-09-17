@@ -6,14 +6,10 @@
 #'   saveable with `ggplot2::ggsave()`.
 #' @examples
 #' if (requireNamespace("ggplot2", quietly = TRUE)) {
-#'   data(yll_toy)
-#'   result <- estimate_yll(
-#'     yll_toy[1:500, ], time_var = "period", event_var = "event",
-#'     exposure_var = "hypertension", reference_level = "No", exposed_level = "Yes",
-#'     age_at_entry_var = "age", target_population = "all",
-#'     age_start = 50, age_end = 70, age_interval = 10, B = 0, use_future = FALSE
-#'   )
-#'   plot_yll(result) + ggplot2::labs(title = "Example YLL")
+#'   # The saved synthetic-data example uses B = 1000 and age_interval = 5.
+#'   result <- readRDS(system.file("extdata", "yll-example.rds", package = "estimandYLL"))
+#'   plot_yll(result, conf_band = TRUE) +
+#'     ggplot2::labs(title = "YLL with 95% confidence intervals")
 #' }
 #' @export
 plot_yll <- function(result, conf_band = TRUE) {
