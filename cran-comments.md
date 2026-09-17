@@ -8,10 +8,11 @@ First planned CRAN submission, version 0.1.0. The package has not been submitted
 * R CMD check --as-cran, including the PDF manual
 * Full development test suite and installed-package future tests with two workers
 
-Local checks: 0 ERRORs, 0 WARNINGs. The pre-publication checks reported incoming
-submission/URL notes and an old system HTML Tidy executable. The website URLs
-are checked again after Pages deployment. The local HTML Tidy note concerns the
-available validator, not an R code or documentation build failure.
+Post-publication check on 2026-09-17: 0 ERRORs, 0 WARNINGs, 2 NOTEs.
+The notes concern a new submission and an old system HTML Tidy executable.
+The earlier website URL note was resolved by publishing the pkgdown site.
+The local HTML Tidy note concerns the available validator, not an R code or
+documentation build failure. Examples, tests, vignettes and the PDF manual pass.
 
 ## Statistical validation
 

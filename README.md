@@ -104,7 +104,7 @@ the package to an observational study.
 
 ## Development and validation
 
-See [NEWS](NEWS.md) for the breaking changes in 0.1.0 and
+See [NEWS](https://shuntaros.github.io/estimandYLL/news/index.html) for the breaking changes in 0.1.0 and
 [the validation record](https://github.com/ShuntaroS/estimandYLL/blob/main/notes/validation/README.md) for the 100-replicate comparison
 with the previous development version. Source scripts are provided there.
 
