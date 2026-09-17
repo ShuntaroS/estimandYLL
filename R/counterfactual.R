@@ -1,16 +1,17 @@
 # Build the prediction grid used by the counterfactual step. For every
 # subject we generate one row per integer age in [age_temp_start,
 # age_temp_end]; the hazard model will then be evaluated at each of these
-# rows under both intervention arms.
+# rows under both exposure scenarios.
 #
 # We deliberately *do not* expand the full lifetime: shrinking the grid to
 # [age_start, age_end] is mathematically harmless because the conditional
 # survival S(y | a_start) cancels every hazard at ages below a_start, and it
 # (a) cuts compute proportionally and (b) avoids extrapolating the hazard
-# model into ages outside the support of the data.
+# model below the earliest requested starting age. Requested ages can still
+# lie outside the observed age support.
 #
-# `expo_original` preserves the *observed* exposure status (used downstream
-# by ATT/ATC selection rules and stochastic interventions); `expo` is set to
+# `expo_original` preserves the observed exposure status (used downstream
+# for selecting the standardization population); `expo` is set to
 # the original value here and will be overwritten by the engine when it
 # evaluates the two arms.
 #' @noRd
@@ -38,7 +39,7 @@ yll_expand_counterfactual_data <- function(
 }
 
 # Convert per-interval hazards into per-subject survival curves under the two
-# intervention arms.
+# exposure scenarios.
 #
 # Discrete-time identity:
 #   S(t) = prod_{u < t} (1 - h(u))
@@ -61,32 +62,6 @@ yll_compute_individual_survival_curves <- function(df, id_var,
       surv1 = lag(.surv1_after_interval, default = 1)
     ) |>
     ungroup()
-}
-
-# Aggregate the two per-subject survival curves into a single population-
-# marginal survival curve under a *stochastic* intervention.
-#
-# For each subject the intervention specifies P(A* = exposed) = `p_exposed`,
-# so their counterfactual survival mixes the two arms:
-#
-#   S_i^*(t) = (1 - p_i) * S_i^{A=ref}(t) + p_i * S_i^{A=exp}(t)
-#
-# We then average the per-subject mixture across subjects within each age to
-# get the marginal curve. Determinstic interventions are just the special
-# case `p_i in {0, 1}`.
-#' @noRd
-yll_mean_survival_under_intervention <- function(df, p_exposed, surv_name = "surv") {
-  if (length(p_exposed) != nrow(df)) {
-    stop("`p_exposed` must have length equal to `nrow(df)`.", call. = FALSE)
-  }
-
-  df |>
-    mutate(
-      .p_exposed = p_exposed,
-      .surv_mix = (1 - .p_exposed) * surv0 + .p_exposed * surv1
-    ) |>
-    group_by(age_temp) |>
-    summarise(!!surv_name := mean(.surv_mix), .groups = "drop")
 }
 
 # Numerically integrate a conditional survival curve to get residual life

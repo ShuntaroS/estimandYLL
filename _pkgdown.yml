@@ -1,19 +1,20 @@
 url: https://shuntaros.github.io/estimandYLL/
 template:
   bootstrap: 5
-
+navbar:
+  structure:
+    left: [intro, reference, articles, news]
+    right: [search, github]
 reference:
-  - title: Estimation
-    desc: Main function for estimating YLL.
-    contents:
-      - estimand_yll
-      - conditional_yll
-  - title: Plotting
-    contents:
-      - plot_yll_estimate
-      - plot_yll
-      - plot_marginal_survival
-      - plot_conditional_survival
-  - title: Data
-    contents:
-      - yll_toy
+  - title: Main estimator
+    contents: [estimate_yll]
+  - title: Comparison models
+    contents: [estimate_yll_poisson, estimate_yll_royston_parmar]
+  - title: Editable ggplot2 figures
+    contents: [plot_yll, plot_survival]
+  - title: Example data and package
+    contents: [yll_toy, estimandYLL-package]
+articles:
+  - title: Learn estimandYLL
+    navbar: ~
+    contents: [getting-started, target-populations, comparison-models, migration, getting-started-ja]

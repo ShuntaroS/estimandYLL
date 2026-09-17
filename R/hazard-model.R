@@ -58,7 +58,7 @@ yll_rhs_confounders <- function(confounders_baseline) {
 #   * any user-supplied baseline confounders.
 #
 # The interaction term is what makes the counterfactual contrast non-trivial:
-# without it the exposure effect would collapse to a single hazard ratio.
+# without it the exposure coefficient would be constant on the log-odds scale.
 #' @noRd
 yll_fit_discrete_hazard_glm <- function(
     df_long,

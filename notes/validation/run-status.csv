@@ -1,0 +1,6 @@
+"setting","legacy_successful","current_successful","legacy_warnings","current_warnings","legacy_seconds","current_seconds"
+"all",100,100,0,0,168.122,179.139
+"exposed",100,100,0,0,94.541,84.751
+"unexposed",100,100,0,0,124.722,119.837
+"poisson",100,100,0,0,183.449,230.81
+"royston_parmar",93,93,31,32,108.172,114.699

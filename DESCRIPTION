@@ -1,6 +1,6 @@
 Package: estimandYLL
 Title: Years of Life Lost via the G-Formula
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R:
     person(
       "Shuntaro", "Sato",
@@ -11,18 +11,17 @@ Authors@R:
 Author: Shuntaro Sato [aut, cre] (ORCID:
     <https://orcid.org/0000-0002-6055-3649>)
 Maintainer: Shuntaro Sato <shuntaro.sato.stat@gmail.com>
-Description: Estimates Years of Life Lost (YLL) and counterfactual life
-    expectancy under user-specified interventions on a binary exposure using
-    the parametric g-formula on the attained-age time scale. The main
-    interface makes the target population, intervention, and result measure
-    explicit, with bootstrap confidence intervals and helpers for plotting
-    conditional and marginal survival curves.
+Description: Estimates years of life lost as the difference in restricted
+    expected residual lifetime between two binary exposure scenarios on the
+    attained-age scale. A pooled logistic parametric g-formula standardizes
+    individual conditional survival curves over an explicitly selected
+    baseline population. Includes Poisson and Royston-Parmar model comparators,
+    participant bootstrap confidence intervals, and plotting helpers.
 License: MIT + file LICENSE
 URL: https://github.com/ShuntaroS/estimandYLL, https://shuntaros.github.io/estimandYLL/
 BugReports: https://github.com/ShuntaroS/estimandYLL/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
 Depends:
     R (>= 4.1)
 Imports:
@@ -37,7 +36,8 @@ Imports:
     survival,
     Epi,
     future.apply,
-    progressr
+    progressr,
+    withr
 Suggests:
     ggplot2,
     future,
@@ -48,3 +48,4 @@ Suggests:
 Config/testthat/edition: 3
 LazyData: true
 VignetteBuilder: knitr
+Config/roxygen2/version: 8.0.0

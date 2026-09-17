@@ -99,4 +99,4 @@ yll_toy <- data.frame(
   age = age
 )
 
-usethis::use_data(yll_toy, overwrite = TRUE)
+save(yll_toy, file = "data/yll_toy.rda", compress = "xz", version = 2)

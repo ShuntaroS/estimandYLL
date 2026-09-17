@@ -1,234 +1,124 @@
-# Draw one bootstrap sample of *individual* IDs (not rows). Resampling at the
-# subject level is essential here because the modelling pipeline treats each
-# subject as a unit and would otherwise underestimate uncertainty by treating
-# correlated person-period rows as independent.
-#' @noRd
-yll_bootstrap_ids <- function(ids) {
-  n <- length(ids)
-  sample(ids, size = n, replace = TRUE)
+# Resampling copies must have distinct IDs, even when the same person is drawn twice.
+# Retain the established sampling order to make comparisons with older versions easy.
+yll_resample_people <- function(data, id_var) {
+  ids <- data[[id_var]]
+  sampled_ids <- sample(ids, length(ids), replace = TRUE)
+  sample_data <- data[match(sampled_ids, ids), , drop = FALSE]
+  copy_number <- ave(seq_along(sampled_ids), sampled_ids, FUN = seq_along)
+  sample_data[[id_var]] <- paste0(sampled_ids, "_rep", copy_number)
+  sample_data
 }
 
-# Materialise a bootstrap dataset from the resampled ID vector.
-#
-# Naively `left_join`ing on the original ID column would give duplicated rows
-# that the engine would (incorrectly) treat as the same subject. To keep each
-# resampled copy independent we mint a fresh "_repK" suffix per duplicate,
-# then assign that synthetic ID back to the original column so downstream
-# code is none the wiser.
-#' @noRd
-yll_make_boot_data <- function(data, id_var, sampled_ids) {
-  id_map <- tibble(
-    !!id_var := sampled_ids,
-    boot_id  = paste0(sampled_ids, "_rep", ave(sampled_ids, sampled_ids, FUN = seq_along))
-  )
-
-  left_join(id_map, data, by = id_var) |>
-    mutate(!!id_var := .data[["boot_id"]]) |>
-    select(-"boot_id")
+yll_run_bootstrap <- function(B, estimate_once, data, id_var,
+                              use_future, show_progress) {
+  if (B == 0L) return(list())
+  one_sample <- function(iteration) {
+    # Keep failures visible instead of silently narrowing the bootstrap distribution.
+    tryCatch({
+      sampled_data <- yll_resample_people(data, id_var)
+      result <- estimate_once(sampled_data)
+      result$estimates$iteration <- iteration
+      result$curves$iteration <- iteration
+      result
+    }, error = function(error) {
+      list(failure = tibble::tibble(iteration = iteration, reason = conditionMessage(error)))
+    })
+  }
+  if (use_future) {
+    if (show_progress) {
+      return(progressr::with_progress({
+        progress <- progressr::progressor(steps = B)
+        future.apply::future_lapply(seq_len(B), function(iteration) {
+          result <- one_sample(iteration)
+          progress()
+          result
+        }, future.seed = TRUE)
+      }))
+    }
+    return(future.apply::future_lapply(seq_len(B), one_sample, future.seed = TRUE))
+  }
+  if (show_progress) {
+    progress <- utils::txtProgressBar(min = 0, max = B, style = 3)
+    on.exit(close(progress), add = TRUE)
+    return(lapply(seq_len(B), function(iteration) {
+      result <- one_sample(iteration)
+      utils::setTxtProgressBar(progress, iteration)
+      result
+    }))
+  }
+  lapply(seq_len(B), one_sample)
 }
 
-# Percentile bootstrap CIs for YLL and both arm-specific LEs.
-#
-# `boot_df` is a long tibble with one row per (bootstrap iteration,
-# starting age). For each starting age we take the requested lower/upper
-# quantiles of the bootstrap distribution.
-#' @noRd
-yll_ci_percentile <- function(boot_df, conf_level) {
+# Both interval methods use the same nonparametric participant bootstrap.
+yll_confidence_intervals <- function(estimates, bootstrap_estimates, conf_level, ci_method) {
+  estimates$yll_se <- NA_real_
+  estimates$ci_low <- NA_real_
+  estimates$ci_high <- NA_real_
   alpha <- (1 - conf_level) / 2
-  boot_df |>
-    group_by(age_start) |>
-    summarise(
-      yll_lwr   = quantile(yll,   alpha,    na.rm = TRUE),
-      yll_upr   = quantile(yll, 1 - alpha,  na.rm = TRUE),
-      le_m0_lwr = quantile(le_m0, alpha,    na.rm = TRUE),
-      le_m0_upr = quantile(le_m0,1 - alpha, na.rm = TRUE),
-      le_m1_lwr = quantile(le_m1, alpha,    na.rm = TRUE),
-      le_m1_upr = quantile(le_m1,1 - alpha, na.rm = TRUE),
-      .groups = "drop"
-    )
-}
-
-# Wald-type ("normal-approximation") bootstrap CIs.
-#
-# Standard errors come from the bootstrap distribution; the interval is
-# point_est ± z_{1-alpha/2} * SE_boot. This is symmetric around the point
-# estimate and is the right choice when the sampling distribution is roughly
-# normal — fast to compute and well-behaved at moderate B.
-#' @noRd
-yll_ci_normal <- function(point_est, boot_df, conf_level) {
-  alpha <- (1 - conf_level) / 2
-  z <- qnorm(1 - alpha)
-
-  se_df <- boot_df |>
-    group_by(age_start) |>
-    summarise(
-      se_yll   = sd(yll,   na.rm = TRUE),
-      se_le_m0 = sd(le_m0, na.rm = TRUE),
-      se_le_m1 = sd(le_m1, na.rm = TRUE),
-      .groups = "drop"
-    )
-
-  point_est |>
-    left_join(se_df, by = "age_start") |>
-    transmute(
-      age_start,
-      se_yll, se_le_m0, se_le_m1,
-      yll_lwr   = yll   - z * se_yll,
-      yll_upr   = yll   + z * se_yll,
-      le_m0_lwr = le_m0 - z * se_le_m0,
-      le_m0_upr = le_m0 + z * se_le_m0,
-      le_m1_lwr = le_m1 - z * se_le_m1,
-      le_m1_upr = le_m1 + z * se_le_m1
-    )
-}
-
-# Rename the internal column names (`yll_lwr_perc`, `se_yll_norm`, etc.) into
-# more readable user-facing labels for the result object's `detailed_results`
-# table, and assemble the trimmed `summary` table whose `ci_low` / `ci_high`
-# columns reflect the user's chosen `method`.
-#
-# Two tables are returned:
-#   * `detailed_results` — every CI / SE column under both methods; useful for
-#     downstream analysis and sanity checks.
-#   * `summary`          — one row per starting age with point estimate, the
-#     requested CI, and the CI method tag. This is what most users actually
-#     read.
-#' @noRd
-yll_make_readable_results <- function(point_est, boot_df, summary_df, method) {
-  # English: The engine uses compact internal names (`le_m0`, `le_m1`) because
-  # it only knows "arm 0" and "arm 1". User-facing tables rename them to
-  # reference/exposed so the connection to the estimand is explicit.
-  # 日本語: エンジン内部では短い列名を使うが、利用者向けにはreference/exposedへ変換する。
-  detailed_results <- summary_df |>
-    rename(
-      starting_age = age_start,
-      yll = yll,
-      le_reference = le_m0,
-      le_exposed = le_m1
-    ) |>
-    rename_with(~ sub("^se_yll_norm$", "yll_se_normal", .x)) |>
-    rename_with(~ sub("^se_le_m0_norm$", "le_reference_se_normal", .x)) |>
-    rename_with(~ sub("^se_le_m1_norm$", "le_exposed_se_normal", .x)) |>
-    rename_with(~ sub("^yll_lwr_perc$", "ci_low_percentile", .x)) |>
-    rename_with(~ sub("^yll_upr_perc$", "ci_high_percentile", .x)) |>
-    rename_with(~ sub("^le_m0_lwr_perc$", "le_reference_ci_low_percentile", .x)) |>
-    rename_with(~ sub("^le_m0_upr_perc$", "le_reference_ci_high_percentile", .x)) |>
-    rename_with(~ sub("^le_m1_lwr_perc$", "le_exposed_ci_low_percentile", .x)) |>
-    rename_with(~ sub("^le_m1_upr_perc$", "le_exposed_ci_high_percentile", .x)) |>
-    rename_with(~ sub("^yll_lwr_norm$", "ci_low_normal", .x)) |>
-    rename_with(~ sub("^yll_upr_norm$", "ci_high_normal", .x)) |>
-    rename_with(~ sub("^le_m0_lwr_norm$", "le_reference_ci_low_normal", .x)) |>
-    rename_with(~ sub("^le_m0_upr_norm$", "le_reference_ci_high_normal", .x)) |>
-    rename_with(~ sub("^le_m1_lwr_norm$", "le_exposed_ci_low_normal", .x)) |>
-    rename_with(~ sub("^le_m1_upr_norm$", "le_exposed_ci_high_normal", .x))
-
-  # Default to NA bounds; the branches below fill them in with whichever CI
-  # method the user requested.
-  # English: `summary` intentionally keeps the arm-specific life expectancies.
-  # They make clinical tables easier to audit: readers can see both the
-  # selected contrast and the two underlying LE values.
-  # 日本語: summaryにもle_reference/le_exposedを残す。推定値だけでなく元の余命も確認できる。
-  main_results <- detailed_results |>
-    mutate(
-      ci_low = NA_real_,
-      ci_high = NA_real_,
-      ci_method = method
-    ) |>
-    select(starting_age, yll, le_reference, le_exposed, ci_low, ci_high, ci_method)
-
-  if (identical(method, "percentile") &&
-      all(c("ci_low_percentile", "ci_high_percentile") %in% names(detailed_results))) {
-    # English: Percentile intervals are asymmetric and are taken directly from
-    # the bootstrap distribution of YLL at each starting age.
-    # 日本語: percentile法ではbootstrap分布の分位点をそのまま信頼区間にする。
-    main_results <- detailed_results |>
-      transmute(
-        starting_age,
-        yll,
-        le_reference,
-        le_exposed,
-        ci_low = .data[["ci_low_percentile"]],
-        ci_high = .data[["ci_high_percentile"]],
-        ci_method = method
-      )
-  } else if (identical(method, "normal") &&
-             all(c("ci_low_normal", "ci_high_normal") %in% names(detailed_results))) {
-    # English: Normal intervals use the bootstrap standard error around the
-    # point estimate. This branch only selects the already-computed columns.
-    # 日本語: normal法では点推定値±標準誤差で作った列を選択する。
-    main_results <- detailed_results |>
-      transmute(
-        starting_age,
-        yll,
-        le_reference,
-        le_exposed,
-        ci_low = .data[["ci_low_normal"]],
-        ci_high = .data[["ci_high_normal"]],
-        ci_method = method
-      )
+  for (row in seq_len(nrow(estimates))) {
+    values <- bootstrap_estimates$yll[
+      bootstrap_estimates$starting_age == estimates$starting_age[row]
+    ]
+    if (length(values) < 2L) next
+    estimates$yll_se[row] <- stats::sd(values)
+    if (ci_method == "normal") {
+      margin <- stats::qnorm(1 - alpha) * estimates$yll_se[row]
+      estimates$ci_low[row] <- estimates$yll[row] - margin
+      estimates$ci_high[row] <- estimates$yll[row] + margin
+    } else {
+      bounds <- stats::quantile(values, c(alpha, 1 - alpha), names = FALSE)
+      estimates$ci_low[row] <- bounds[1]
+      estimates$ci_high[row] <- bounds[2]
+    }
   }
+  estimates
+}
 
+yll_build_result <- function(point, replicates, meta) {
+  failures <- bind_rows(lapply(replicates, function(result) result$failure))
+  if (nrow(failures) == 0L) {
+    failures <- tibble::tibble(iteration = integer(), reason = character())
+  }
+  succeeded <- vapply(replicates, function(result) is.null(result$failure), logical(1))
+  successful <- replicates[succeeded]
+  bootstrap_estimates <- point$estimates[0, ]
+  bootstrap_estimates$iteration <- integer()
+  bootstrap_curves <- point$curves[0, ]
+  bootstrap_curves$iteration <- integer()
+  if (length(successful) > 0L) {
+    bootstrap_estimates <- bind_rows(lapply(successful, function(result) result$estimates))
+    bootstrap_curves <- bind_rows(lapply(successful, function(result) result$curves))
+  }
+  meta$bootstrap_successful <- sum(succeeded)
+  meta$bootstrap_failures <- failures
+  # A model can return finite numbers even when its survival predictions are
+  # invalid. Keep the raw results for diagnosis, but never present them silently.
+  window <- meta$age_end - bootstrap_estimates$starting_age
+  outside_window <- bootstrap_estimates$erl_reference < -1e-8 |
+    bootstrap_estimates$erl_exposed < -1e-8 |
+    bootstrap_estimates$erl_reference > window + 1e-8 |
+    bootstrap_estimates$erl_exposed > window + 1e-8
+  meta$bootstrap_unreliable <- bootstrap_estimates[outside_window, ]
+  if (nrow(meta$bootstrap_unreliable) > 0L) {
+    warning("Bootstrap ERL estimates outside the possible age window were returned. ",
+            "The model is numerically unstable; the resulting confidence intervals are unreliable. ",
+            "Raw estimates are retained in meta$bootstrap_unreliable for diagnosis.", call. = FALSE)
+  }
+  if (nrow(failures) > 0L) {
+    warning(nrow(failures), " of ", meta$B, " bootstrap replicates failed. ",
+            "Intervals use the successful replicates and may be unreliable. ",
+            "See result$meta$bootstrap_failures for iteration numbers and reasons. ",
+            "First failure: ", failures$reason[1], call. = FALSE)
+  }
+  if (meta$B > 0L && sum(succeeded) < 2L) {
+    warning("Fewer than two bootstrap replicates succeeded; confidence intervals are NA.", call. = FALSE)
+  }
   list(
-    detailed_results = detailed_results,
-    summary = main_results
+    summary = yll_confidence_intervals(point$estimates, bootstrap_estimates,
+                                       meta$conf_level, meta$ci_method),
+    bootstrap_estimates = bootstrap_estimates,
+    survival_curves = point$curves,
+    bootstrap_survival_curves = bootstrap_curves,
+    meta = meta
   )
-}
-
-# Assemble the final result list returned to the user.
-#
-# Returning a structured list (instead of dropping a single tibble back) lets
-# us carry the run metadata, both summaries, and the marginal survival curves
-# needed by the plotting helpers. Plot helpers pick up
-# `marginal_survival_point` / `marginal_survival_boot`; downstream analyses
-# typically read `summary` and `detailed_results`.
-#' @noRd
-yll_build_result_object <- function(point_est, boot_df, summary_df, meta, method,
-                                    marginal_survival_point = NULL,
-                                    marginal_survival_boot = NULL,
-                                    conditional_survival_point = NULL,
-                                    conditional_survival_boot = NULL) {
-  readable <- yll_make_readable_results(point_est, boot_df, summary_df, method = method)
-
-  list(
-    detailed_results = readable$detailed_results,
-    summary = readable$summary,
-    meta = meta,
-    marginal_survival_point = marginal_survival_point,
-    marginal_survival_boot  = marginal_survival_boot,
-    conditional_survival_point = conditional_survival_point,
-    conditional_survival_boot  = conditional_survival_boot
-  )
-}
-
-# Stack the per-iteration curves into one long tibble (with a `b` column
-# identifying the iteration). The `element` argument selects which element of
-# the boot result list to collect: `"curves"` for marginal curves (default)
-# or `"conditional_curves"` for the per-a_start conditional curves.
-# NULL-safe so degenerate iterations don't blow up.
-#' @noRd
-yll_collect_bootstrap_curves <- function(boot_results, element = "curves") {
-  curves <- lapply(boot_results, `[[`, element)
-  curves <- curves[!vapply(curves, is.null, logical(1))]
-  if (length(curves) == 0) return(NULL)
-  bind_rows(curves)
-}
-
-# Package one bootstrap iteration's outputs into the shape the parent loop
-# expects: a list with the YLL tibble (tagged with iteration index `b`), the
-# iteration's marginal survival curves, and the conditional curves.
-#
-# Both curve types come back as attributes on the YLL tibble so the inner
-# engine can return them without changing its return type; here we promote
-# them into proper top-level elements.
-#' @noRd
-yll_one_boot_result <- function(yll_tibble, b) {
-  curves <- attr(yll_tibble, "marginal_curves")
-  if (!is.null(curves)) {
-    curves[["b"]] <- b
-  }
-  cond_curves <- attr(yll_tibble, "conditional_curves")
-  if (!is.null(cond_curves)) {
-    cond_curves[["b"]] <- b
-  }
-  list(yll = mutate(yll_tibble, b = b), curves = curves, conditional_curves = cond_curves)
 }

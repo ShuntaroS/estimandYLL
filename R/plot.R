@@ -1,346 +1,114 @@
-# Build the conditional-survival table the plotting helper consumes.
-#
-# Reads `conditional_survival_point` (the per-a_start conditional curves from
-# the engine) and optionally `conditional_survival_boot` (same across bootstrap
-# iterations). Both are tibbles with an `age_start` column so filtering is
-# straightforward. When no bootstrap curves are available we return just the
-# point estimate columns.
-#' @noRd
-yll_conditional_curves_with_ci <- function(conditional_survival_point,
-                                           conditional_survival_boot,
-                                           age_start,
-                                           conf_level = 0.95) {
-  if (is.null(conditional_survival_point)) {
-    stop("Result has no conditional_survival_point. Re-run estimation to enable plotting.", call. = FALSE)
+#' Plot years of life lost across starting ages
+#'
+#' @param result A result from one of the package's estimation functions.
+#' @param conf_band Include available pointwise confidence intervals.
+#' @return A ggplot object, editable with `+ labs()` and `+ theme()` and
+#'   saveable with `ggplot2::ggsave()`.
+#' @examples
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   data(yll_toy)
+#'   result <- estimate_yll(
+#'     yll_toy[1:500, ], time_var = "period", event_var = "event",
+#'     exposure_var = "hypertension", reference_level = "No", exposed_level = "Yes",
+#'     age_at_entry_var = "age", target_population = "all",
+#'     age_start = 50, age_end = 70, age_interval = 10, B = 0, use_future = FALSE
+#'   )
+#'   plot_yll(result) + ggplot2::labs(title = "Example YLL")
+#' }
+#' @export
+plot_yll <- function(result, conf_band = TRUE) {
+  yll_check_plot_input(result, conf_band)
+  estimates <- result$summary
+  plot <- ggplot2::ggplot(estimates, ggplot2::aes(x = .data$starting_age, y = .data$yll)) +
+    ggplot2::geom_hline(yintercept = 0, colour = "grey70", linetype = "dashed") +
+    ggplot2::geom_point() +
+    ggplot2::labs(x = "Starting age (years)", y = "Years of life lost (years)") +
+    ggplot2::theme_minimal()
+  if (nrow(estimates) > 1L) plot <- plot + ggplot2::geom_line()
+  if (conf_band && any(is.finite(estimates$ci_low))) {
+    plot <- plot + ggplot2::geom_errorbar(
+      ggplot2::aes(ymin = .data$ci_low, ymax = .data$ci_high), width = 0.5, na.rm = TRUE
+    )
   }
+  plot
+}
 
-  point_cond <- conditional_survival_point[conditional_survival_point$age_start == age_start, , drop = FALSE]
-  if (nrow(point_cond) == 0) {
-    stop("age_start = ", age_start, " is not present in the conditional_survival_point.", call. = FALSE)
-  }
-
-  out <- tibble(
-    age_temp     = point_cond$age_temp,
-    surv_cond_g0 = point_cond$surv0,
-    surv_cond_g1 = point_cond$surv1
-  )
-
-  if (!is.null(conditional_survival_boot) && nrow(conditional_survival_boot) > 0) {
-    boot_sub <- conditional_survival_boot[conditional_survival_boot$age_start == age_start, , drop = FALSE]
-    if (nrow(boot_sub) > 0) {
-      alpha <- (1 - conf_level) / 2
-      ci_df <- boot_sub |>
-        group_by(age_temp) |>
-        summarise(
-          surv_cond_g0_low  = quantile(surv0, alpha,    na.rm = TRUE),
-          surv_cond_g0_high = quantile(surv0, 1 - alpha, na.rm = TRUE),
-          surv_cond_g1_low  = quantile(surv1, alpha,    na.rm = TRUE),
-          surv_cond_g1_high = quantile(surv1, 1 - alpha, na.rm = TRUE),
-          .groups = "drop"
-        )
-      out <- left_join(out, ci_df, by = "age_temp")
+#' Plot standardized survival from a specified starting age
+#'
+#' Each curve is the mean of individual survival curves restarted at one at
+#' `age_start`. Both scenarios use the same target population.
+#' @inheritParams plot_yll
+#' @param age_start A starting age present in `result$survival_curves`.
+#' @param reference_label,exposed_label Optional legend labels. By default,
+#'   the exposure values recorded in the result are displayed.
+#' @return An editable ggplot object. Confidence bands are pointwise bootstrap
+#'   intervals using the result's confidence level and interval method, clipped
+#'   to zero and one. They are not simultaneous bands.
+#' @export
+plot_survival <- function(result, age_start, conf_band = TRUE,
+                           reference_label = NULL, exposed_label = NULL) {
+  yll_check_plot_input(result, conf_band)
+  yll_check_number(age_start, "age_start")
+  curves <- result$survival_curves
+  curves <- curves[curves$starting_age == age_start, , drop = FALSE]
+  if (!nrow(curves)) stop("`age_start` is not a reported starting age in this result.", call. = FALSE)
+  if (is.null(reference_label)) reference_label <- paste0("Reference: ", result$meta$reference_level)
+  if (is.null(exposed_label)) exposed_label <- paste0("Exposed: ", result$meta$exposed_level)
+  labels <- c(reference_label, exposed_label)
+  columns <- c("survival_reference", "survival_exposed")
+  bootstrap <- result$bootstrap_survival_curves
+  bootstrap <- bootstrap[bootstrap$starting_age == age_start, , drop = FALSE]
+  alpha <- (1 - result$meta$conf_level) / 2
+  plot_data <- vector("list", 2L)
+  for (scenario in seq_along(columns)) {
+    column <- columns[scenario]
+    scenario_data <- tibble::tibble(
+      age = curves$age, survival = curves[[column]],
+      scenario = labels[scenario], ci_low = NA_real_, ci_high = NA_real_
+    )
+    if (conf_band && nrow(bootstrap)) {
+      for (row in seq_len(nrow(scenario_data))) {
+        values <- bootstrap[[column]][bootstrap$age == scenario_data$age[row]]
+        if (length(values) < 2L) next
+        if (result$meta$ci_method == "normal") {
+          margin <- stats::qnorm(1 - alpha) * stats::sd(values)
+          bounds <- scenario_data$survival[row] + c(-margin, margin)
+        } else {
+          bounds <- stats::quantile(values, c(alpha, 1 - alpha), names = FALSE)
+        }
+        scenario_data$ci_low[row] <- max(0, bounds[1])
+        scenario_data$ci_high[row] <- min(1, bounds[2])
+      }
     }
+    plot_data[[scenario]] <- scenario_data
   }
-
-  out
-}
-
-# Build the marginal-survival table for `plot_marginal_survival()`.
-#
-# Mirrors `yll_conditional_curves_with_ci()` but on the *unconditional*
-# population-marginal curves S(t) — i.e. before conditioning on survival to
-# any chosen starting age. Pointwise CI bounds at each age are again the
-# lower/upper `(1 - conf_level)/2` quantiles across bootstrap iterations.
-#' @noRd
-yll_marginal_curves_with_ci <- function(marginal_survival_point,
-                                        marginal_survival_boot,
-                                        conf_level = 0.95) {
-  if (is.null(marginal_survival_point)) {
-    stop("Result has no marginal_survival_point. Re-run estimation to enable plotting.", call. = FALSE)
-  }
-
-  out <- tibble(
-    age_temp = marginal_survival_point$age_temp,
-    surv0    = marginal_survival_point$surv0,
-    surv1    = marginal_survival_point$surv1
-  )
-
-  if (!is.null(marginal_survival_boot) && nrow(marginal_survival_boot) > 0) {
-    alpha <- (1 - conf_level) / 2
-    ci_df <- marginal_survival_boot |>
-      group_by(age_temp) |>
-      summarise(
-        surv0_low  = quantile(surv0, alpha,    na.rm = TRUE),
-        surv0_high = quantile(surv0, 1 - alpha, na.rm = TRUE),
-        surv1_low  = quantile(surv1, alpha,    na.rm = TRUE),
-        surv1_high = quantile(surv1, 1 - alpha, na.rm = TRUE),
-        .groups = "drop"
-      )
-    out <- left_join(out, ci_df, by = "age_temp")
-  }
-
-  out
-}
-
-#' Plot the conditional survival probability from a starting age
-#'
-#' Draws the conditional survival curves \eqn{S(y \mid a_{\text{start}})} for the
-#' two intervention arms, optionally with a pointwise bootstrap confidence
-#' band.
-#'
-#' @param res A result object returned by [estimand_yll()].
-#' @param age_start Numeric. The starting age \eqn{a_{\text{start}}} used to
-#'   condition the survival curve.
-#' @param conf_band Logical. If `TRUE` (default) and bootstrap curves are
-#'   available, draws a pointwise confidence band around each curve.
-#' @param reference_label,exposed_label Character labels for the two
-#'   intervention arms shown in the legend.
-#' @param conf_level Confidence level for the pointwise band. Defaults to the
-#'   value stored in `res$meta$conf_level`, falling back to `0.95`.
-#'
-#' @return A `ggplot` object.
-#' @export
-plot_conditional_survival <- function(res,
-                                      age_start,
-                                      conf_band = TRUE,
-                                      reference_label = "Reference",
-                                      exposed_label   = "Exposed",
-                                      conf_level      = NULL) {
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for plot_conditional_survival().", call. = FALSE)
-  }
-
-  if (is.null(conf_level)) {
-    conf_level <- if (!is.null(res$meta$conf_level)) res$meta$conf_level else 0.95
-  }
-
-  cs <- yll_conditional_curves_with_ci(
-    conditional_survival_point = res$conditional_survival_point,
-    conditional_survival_boot  = res$conditional_survival_boot,
-    age_start                  = age_start,
-    conf_level                 = conf_level
-  )
-
-  has_ci <- all(c("surv_cond_g0_low", "surv_cond_g0_high",
-                  "surv_cond_g1_low", "surv_cond_g1_high") %in% names(cs))
-
-  long <- bind_rows(
-    tibble(
-      age_temp = cs$age_temp,
-      surv     = cs$surv_cond_g0,
-      ci_low   = if (has_ci) cs$surv_cond_g0_low  else NA_real_,
-      ci_high  = if (has_ci) cs$surv_cond_g0_high else NA_real_,
-      arm      = reference_label
-    ),
-    tibble(
-      age_temp = cs$age_temp,
-      surv     = cs$surv_cond_g1,
-      ci_low   = if (has_ci) cs$surv_cond_g1_low  else NA_real_,
-      ci_high  = if (has_ci) cs$surv_cond_g1_high else NA_real_,
-      arm      = exposed_label
-    )
-  )
-  long$arm <- factor(long$arm, levels = c(reference_label, exposed_label))
-
-  p <- ggplot2::ggplot(long, ggplot2::aes(x = age_temp, y = surv,
-                                          colour = arm, fill = arm)) +
-    ggplot2::geom_line(linewidth = 0.8) +
-    ggplot2::coord_cartesian(ylim = c(0, 1)) +
-    ggplot2::labs(
-      x      = "Age (years)",
-      y      = sprintf("Conditional survival probability (from age %g)", age_start),
-      colour = "Intervention",
-      fill   = "Intervention"
-    ) +
+  plot_data <- bind_rows(plot_data)
+  plot_data$scenario <- factor(plot_data$scenario, levels = labels)
+  plot <- ggplot2::ggplot(plot_data, ggplot2::aes(
+    x = .data$age, y = .data$survival, colour = .data$scenario, fill = .data$scenario
+  )) + ggplot2::coord_cartesian(ylim = c(0, 1)) +
+    ggplot2::labs(x = "Age (years)", y = paste0("Survival probability from age ", age_start),
+                  colour = "Exposure scenario", fill = "Exposure scenario") +
     ggplot2::theme_minimal()
-
-  if (conf_band && has_ci) {
-    p <- p + ggplot2::geom_ribbon(
-      ggplot2::aes(ymin = ci_low, ymax = ci_high),
-      alpha = 0.2, colour = NA
+  if (conf_band && any(is.finite(plot_data$ci_low))) {
+    plot <- plot + ggplot2::geom_ribbon(
+      ggplot2::aes(ymin = .data$ci_low, ymax = .data$ci_high),
+      alpha = 0.2, colour = NA, na.rm = TRUE
     )
   }
-
-  p
+  if (nrow(curves) > 1L) plot <- plot + ggplot2::geom_line(linewidth = 0.8)
+  else plot <- plot + ggplot2::geom_point()
+  plot
 }
 
-#' Plot the selected YLL estimate across starting ages
-#'
-#' Draws the main `estimate` column returned by [estimand_yll()]. When
-#' `measure = "life_year_change"`, positive values mean longer life expectancy
-#' after the stated intervention and negative values mean shorter life
-#' expectancy.
-#'
-#' @param res A result object returned by [estimand_yll()].
-#' @param conf_band Logical. If `TRUE` (default) and `ci_low`/`ci_high` are
-#'   present in `res$summary`, draws a confidence band.
-#'
-#' @return A `ggplot` object.
-#' @export
-plot_yll_estimate <- function(res, conf_band = TRUE) {
+yll_check_plot_input <- function(result, conf_band) {
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for plot_yll_estimate().", call. = FALSE)
+    stop("Install 'ggplot2' to use the plotting functions.", call. = FALSE)
   }
-
-  s <- res$summary
-  if (!("estimate" %in% names(s))) {
-    stop("Result has no `estimate` column. Use plot_yll() for legacy result objects.", call. = FALSE)
+  if (!is.list(result) || !all(c("summary", "survival_curves", "meta") %in% names(result))) {
+    stop("`result` must be returned by an estimandYLL estimation function.", call. = FALSE)
   }
-
-  # English: `estimate` changes meaning with `measure`, so the y-axis label
-  # must be read from metadata rather than hard-coded as YLL.
-  # 日本語: estimate列はmeasureによって意味が変わるため、軸ラベルもmetaから決める。
-  measure <- if (!is.null(res$meta$measure)) res$meta$measure else unique(s$measure)[[1]]
-  y_label <- if (identical(measure, "life_year_change")) {
-    "Life-year change (years)"
-  } else {
-    "Years of life lost (years)"
+  if (!is.logical(conf_band) || length(conf_band) != 1L || is.na(conf_band)) {
+    stop("`conf_band` must be TRUE or FALSE.", call. = FALSE)
   }
-
-  # English: The zero line is clinically useful: values above zero mean
-  # longer life expectancy for life-year change, while values below zero mean
-  # harm. For YLL, zero is the null exposure contrast.
-  # 日本語: 0線は解釈の基準。life_year_changeでは正が余命増加、負が余命減少を表す。
-  p <- ggplot2::ggplot(s, ggplot2::aes(x = starting_age, y = estimate)) +
-    ggplot2::geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.4) +
-    ggplot2::geom_line(linewidth = 0.8) +
-    ggplot2::geom_point(size = 2) +
-    ggplot2::labs(
-      x = "Starting age (years)",
-      y = y_label
-    ) +
-    ggplot2::theme_minimal()
-
-  if (conf_band && all(c("ci_low", "ci_high") %in% names(s)) &&
-      any(is.finite(s$ci_low))) {
-    # English: CI columns have already been oriented to the chosen measure in
-    # `yll_add_measure_columns()`, so plotting can use them directly.
-    # 日本語: 信頼区間はmeasureに合わせて符号調整済みなので、そのまま描画する。
-    p <- p + ggplot2::geom_ribbon(
-      ggplot2::aes(ymin = ci_low, ymax = ci_high),
-      alpha = 0.2, colour = NA
-    )
-  }
-
-  p
-}
-
-#' Plot YLL across starting ages
-#'
-#' Draws estimated years of life lost (YLL) as a function of the starting age,
-#' with an optional confidence band when bootstrap CIs are available in the
-#' result object.
-#'
-#' @param res A result object returned by [estimand_yll()].
-#' @param conf_band Logical. If `TRUE` (default) and `ci_low`/`ci_high` are
-#'   present in `res$summary`, draws a confidence band.
-#'
-#' @return A `ggplot` object.
-#' @export
-plot_yll <- function(res, conf_band = TRUE) {
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for plot_yll().", call. = FALSE)
-  }
-
-  s <- res$summary
-  # English: Keep `plot_yll()` backward compatible. New results have
-  # `estimate`; old internal/legacy results only have `yll`.
-  # 日本語: 新APIではestimateを描き、旧結果では従来通りyllを描く。
-  value_var <- if ("estimate" %in% names(s)) "estimate" else "yll"
-  y_label <- if ("estimate" %in% names(s) && identical(res$meta$measure, "life_year_change")) {
-    "Life-year change (years)"
-  } else {
-    "Years of life lost (years)"
-  }
-  s$.plot_value <- s[[value_var]]
-
-  p <- ggplot2::ggplot(s, ggplot2::aes(x = starting_age, y = .plot_value)) +
-    ggplot2::geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.4) +
-    ggplot2::geom_line(linewidth = 0.8) +
-    ggplot2::geom_point(size = 2) +
-    ggplot2::labs(
-      x = "Starting age (years)",
-      y = y_label
-    ) +
-    ggplot2::theme_minimal()
-
-  if (conf_band && all(c("ci_low", "ci_high") %in% names(s)) &&
-      any(is.finite(s$ci_low))) {
-    p <- p + ggplot2::geom_ribbon(
-      ggplot2::aes(ymin = ci_low, ymax = ci_high),
-      alpha = 0.2, colour = NA
-    )
-  }
-
-  p
-}
-
-#' Plot marginal survival curves for the two intervention arms
-#'
-#' Draws the population-level marginal survival curves \eqn{S(t)} for the two
-#' intervention arms, optionally with pointwise bootstrap confidence bands.
-#'
-#' @inheritParams plot_conditional_survival
-#'
-#' @return A `ggplot` object.
-#' @export
-plot_marginal_survival <- function(res,
-                                   conf_band = TRUE,
-                                   reference_label = "Reference",
-                                   exposed_label   = "Exposed",
-                                   conf_level      = NULL) {
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for plot_marginal_survival().", call. = FALSE)
-  }
-
-  if (is.null(conf_level)) {
-    conf_level <- if (!is.null(res$meta$conf_level)) res$meta$conf_level else 0.95
-  }
-
-  ms <- yll_marginal_curves_with_ci(
-    marginal_survival_point = res$marginal_survival_point,
-    marginal_survival_boot  = res$marginal_survival_boot,
-    conf_level              = conf_level
-  )
-
-  has_ci <- all(c("surv0_low", "surv0_high", "surv1_low", "surv1_high") %in% names(ms))
-
-  long <- bind_rows(
-    tibble(
-      age_temp = ms$age_temp,
-      surv     = ms$surv0,
-      ci_low   = if (has_ci) ms$surv0_low  else NA_real_,
-      ci_high  = if (has_ci) ms$surv0_high else NA_real_,
-      arm      = reference_label
-    ),
-    tibble(
-      age_temp = ms$age_temp,
-      surv     = ms$surv1,
-      ci_low   = if (has_ci) ms$surv1_low  else NA_real_,
-      ci_high  = if (has_ci) ms$surv1_high else NA_real_,
-      arm      = exposed_label
-    )
-  )
-  long$arm <- factor(long$arm, levels = c(reference_label, exposed_label))
-
-  p <- ggplot2::ggplot(long, ggplot2::aes(x = age_temp, y = surv,
-                                          colour = arm, fill = arm)) +
-    ggplot2::geom_line(linewidth = 0.8) +
-    ggplot2::coord_cartesian(ylim = c(0, 1)) +
-    ggplot2::labs(
-      x      = "Age (years)",
-      y      = "Marginal survival probability",
-      colour = "Intervention",
-      fill   = "Intervention"
-    ) +
-    ggplot2::theme_minimal()
-
-  if (conf_band && has_ci) {
-    p <- p + ggplot2::geom_ribbon(
-      ggplot2::aes(ymin = ci_low, ymax = ci_high),
-      alpha = 0.2, colour = NA
-    )
-  }
-
-  p
 }

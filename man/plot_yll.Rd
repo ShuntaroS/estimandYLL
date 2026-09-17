@@ -2,21 +2,31 @@
 % Please edit documentation in R/plot.R
 \name{plot_yll}
 \alias{plot_yll}
-\title{Plot YLL across starting ages}
+\title{Plot years of life lost across starting ages}
 \usage{
-plot_yll(res, conf_band = TRUE)
+plot_yll(result, conf_band = TRUE)
 }
 \arguments{
-\item{res}{A result object returned by \code{\link[=estimand_yll]{estimand_yll()}}.}
+\item{result}{A result from one of the package's estimation functions.}
 
-\item{conf_band}{Logical. If \code{TRUE} (default) and \code{ci_low}/\code{ci_high} are
-present in \code{res$summary}, draws a confidence band.}
+\item{conf_band}{Include available pointwise confidence intervals.}
 }
 \value{
-A \code{ggplot} object.
+A ggplot object, editable with \code{+ labs()} and \code{+ theme()} and
+saveable with \code{ggplot2::ggsave()}.
 }
 \description{
-Draws the selected estimate as a function of the starting age. For new
-\code{estimand_yll()} results this uses \code{res$summary$estimate}; for
-legacy result objects it falls back to \code{res$summary$yll}.
+Plot years of life lost across starting ages
+}
+\examples{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  data(yll_toy)
+  result <- estimate_yll(
+    yll_toy[1:500, ], time_var = "period", event_var = "event",
+    exposure_var = "hypertension", reference_level = "No", exposed_level = "Yes",
+    age_at_entry_var = "age", target_population = "all",
+    age_start = 50, age_end = 70, age_interval = 10, B = 0, use_future = FALSE
+  )
+  plot_yll(result) + ggplot2::labs(title = "Example YLL")
+}
 }

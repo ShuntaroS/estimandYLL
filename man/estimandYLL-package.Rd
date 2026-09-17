@@ -6,11 +6,9 @@
 \alias{estimandYLL-package}
 \title{estimandYLL: Years of Life Lost via the G-Formula}
 \description{
-Estimates Years of Life Lost (YLL) and counterfactual life expectancy
-under user-specified interventions on a binary exposure using the
-parametric g-formula on the attained-age time scale. The main interface,
-\code{\link[=estimand_yll]{estimand_yll()}}, makes the target population,
-intervention, and result measure explicit.
+Estimate differences in restricted expected residual lifetime under two
+binary exposure scenarios, standardized to a stated baseline population.
+See \code{\link[=estimate_yll]{estimate_yll()}} for the main estimator and interpretation.
 }
 \seealso{
 Useful links:
@@ -23,6 +21,11 @@ Useful links:
 }
 \author{
 \strong{Maintainer}: Shuntaro Sato \email{shuntaro.sato.stat@gmail.com} (\href{https://orcid.org/0000-0002-6055-3649}{ORCID})
+
+Authors:
+\itemize{
+  \item Shuntaro Sato \email{shuntaro.sato.stat@gmail.com} (\href{https://orcid.org/0000-0002-6055-3649}{ORCID})
+}
 
 }
 \keyword{internal}

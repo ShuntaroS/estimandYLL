@@ -1,95 +1,86 @@
-# Legacy internal interfaces.
-#
-# English: The public API now lives in `estimand_yll()` (`R/api.R`). The
-# functions in this file are kept as an internal compatibility layer and as
-# the modelling engine used to verify that the new API reproduces the old
-# estimands. 日本語: 公開入口は `estimand_yll()` に集約し、このファイルの
-# 旧関数は内部互換と検証のために残す。
-
-#' Estimate YLL via the g-formula (ATE / ATT / ATC)
+#' Estimate years of life lost in a specified target population
 #'
-#' Fits a discrete-time hazard model on the attained-age time scale, builds
-#' counterfactual survival curves under "all reference" vs. "all exposed"
-#' interventions, and reports Years of Life Lost (YLL) and counterfactual life
-#' expectancy (LE) at user-chosen starting ages, with bootstrap confidence
-#' intervals.
+#' Fit a pooled logistic hazard model on the full analytic sample, predict
+#' survival under both exposure levels, and average individual conditional
+#' survival curves over the specified baseline population. The contrast is
+#' always restricted expected residual lifetime (ERL) under the reference
+#' level minus ERL under the exposed level. Its sign never depends on the
+#' target population.
 #'
-#' This function is the main legacy interface. For arbitrary interventions or
-#' target populations, use [estimate_yll_gformula_intervention()].
+#' @param data A data frame with one row per person and no missing values in
+#'   the selected variables. Remove incomplete records explicitly before use.
+#' @param id_var Name of the unique person identifier column.
+#' @param time_var Name of the positive follow-up duration column, in years.
+#' @param event_var Name of the event indicator column, coded 0/1.
+#' @param exposure_var Name of the binary exposure column.
+#' @param reference_level,exposed_level Observed exposure values corresponding
+#'   to x = 0 and x = 1. Specify both to make the direction explicit. If omitted,
+#'   factor order (or order of appearance for other types) is used and reported.
+#' @param age_at_entry_var Name of the age-at-entry column, in years.
+#' @param target_population Required. One of `"all"`, `"exposed"`, or
+#'   `"unexposed"`. Selects the baseline covariate distribution used for
+#'   standardization, not the data used to fit the hazard model.
+#' @param age_start First starting age at which to report ERL and YLL.
+#' @param age_end Upper age limiting every ERL integral. Also the upper bound
+#'   of the reporting sequence. Must be at least `age_start`.
+#' @param age_interval Spacing between reported starting ages. Results are
+#'   reported at `seq(age_start, age_end, age_interval)`. The main estimator
+#'   requires integer ages and uses a one-year integration grid regardless
+#'   of this reporting interval.
+#' @param confounders_baseline Character vector of baseline covariate columns.
+#' @param B Number of participant bootstrap replicates, at least 2, or 0 to
+#'   obtain point estimates only. Failed replicates are reported in a warning
+#'   and recorded in the result metadata; intervals use successful replicates.
+#' @param seed Integer random seed. The caller's random state is restored.
+#' @param conf_level Confidence level, strictly between zero and one.
+#' @param ci_method `"normal"` (default) uses the bootstrap standard error;
+#'   `"percentile"` uses bootstrap quantiles. Both resample people with replacement.
+#' @param integration `"left_rectangle"` (default) or `"trapezoidal"`.
+#' @param show_progress Whether to show bootstrap progress. Parallel progress
+#'   uses the caller's progressr handlers.
+#' @param use_future Use the caller's future plan for bootstrapping. The
+#'   package never changes the plan or starts a worker pool itself.
 #'
-#' @param data A `data.frame` with one row per individual, containing the
-#'   variables specified by `id_var`, `time_var`, `event_var`, `exposure_var`,
-#'   `age_at_entry_var`, and any `confounders_baseline`.
-#' @param B Number of bootstrap iterations. Set to `0` to skip bootstrapping
-#'   (returns point estimates only).
-#' @param seed Integer seed for reproducibility.
-#' @param conf_level Confidence level for the intervals (e.g. `0.95`).
-#' @param method Either `"normal"` (Wald-type interval using bootstrap SE) or
-#'   `"percentile"` (bootstrap percentile interval).
-#' @param show_progress Show a progress bar during bootstrap.
-#' @param id_var,time_var,event_var,exposure_var Column names in `data`.
-#' @param reference_level,exposed_level Values labelling the two exposure
-#'   levels. If `NULL` they are inferred from the data.
-#' @param age_at_entry_var Column name for age at study entry.
-#' @param age_start,age_end,age_interval Starting ages for which YLL is
-#'   reported, given as `seq(age_start, age_end, age_interval)`.
-#' @param confounders_baseline Character vector of baseline confounder column
-#'   names. Including the entry-age column here is discouraged and triggers a
-#'   warning, since attained age is already modelled via splines.
-#' @param estimand One of `"ATT"`, `"ATC"`, or `"ATE"`.
-#' @param integration Discretisation rule for the area under the conditional
-#'   survival curve: `"left_rectangle"` (default; matches the discrete-time
-#'   hazard model) or `"trapezoidal"`.
-#' @param use_future If `TRUE`, parallelise the bootstrap with
-#'   [future.apply::future_lapply()]. The caller is expected to set a parallel
-#'   plan (e.g. `future::plan(future::multisession())`).
+#' @return A list with five elements:
+#' * `summary`: one row per `starting_age`, with `erl_reference`, `erl_exposed`,
+#'   `yll`, `yll_se`, `ci_low`, and `ci_high`, all measured in years.
+#' * `bootstrap_estimates`: the four point-estimate columns plus `iteration`.
+#' * `survival_curves`: `starting_age`, `age`, `survival_reference`, and
+#'   `survival_exposed`, averaged over the target population.
+#' * `bootstrap_survival_curves`: the same curve columns plus `iteration`.
+#' * `meta`: model, target population, exposure labels, age window, interval
+#'   method, bootstrap settings, successful replicate count, and failure details.
+#'   `bootstrap_unreliable` records finite bootstrap ERLs outside the possible
+#'   age window. These trigger a warning and are retained, not silently removed.
 #'
-#' @return A list with elements
-#'   \describe{
-#'     \item{`summary`}{Point estimates and CI for YLL at each starting age.}
-#'     \item{`detailed_results`}{Same as `summary` plus LE under each arm and
-#'       all CI / SE columns.}
-#'     \item{`meta`}{Run settings (`B`, `seed`, `conf_level`, `method`,
-#'       `estimand`, `age_start`, `age_end`, `age_interval`, `integration`).}
-#'     \item{`marginal_survival_point`}{Population-marginal counterfactual
-#'       survival curves (point estimate).}
-#'     \item{`marginal_survival_boot`}{Same curves across bootstrap
-#'       iterations (used by the plotting helpers).}
-#'   }
+#' With `B = 0`, intervals and standard errors are `NA` and bootstrap tables
+#' are empty. Curves are standardized after conditioning each person on
+#' survival to the starting age. They are not curves obtained by first
+#' averaging unconditional survival and then conditioning that average.
+#' Intervals are pointwise, not simultaneous confidence bands.
 #'
-#' @seealso [estimate_yll_gformula_intervention()],
-#'   [estimate_yll_gformula_binary_stochastic_vs_natural()], [plot_yll()].
+#' @details The fitted model includes exposure, a natural cubic spline in
+#' attained age, their interaction, and the supplied baseline covariates.
+#' Follow-up is split into one-year intervals after cohort entry. Predictions
+#' represent sustained exposure scenarios, not exposure changes initiated at
+#' the starting age. Causal interpretation requires consistency, exchangeability,
+#' positivity, appropriate censoring and entry assumptions, and correct model
+#' specification. Predictions beyond observed age support require extrapolation.
+#' The same baseline covariate distribution is retained at every starting age.
 #'
 #' @examples
-#' \donttest{
-#' data(yll_toy, package = "estimandYLL")
-#' res <- estimate_yll_gformula_ate(
-#'   data                 = yll_toy,
-#'   B                    = 0,
-#'   show_progress        = FALSE,
-#'   time_var             = "period",
-#'   event_var            = "event",
-#'   exposure_var         = "hypertension",
-#'   reference_level      = "No",
-#'   exposed_level        = "Yes",
-#'   age_at_entry_var     = "age",
-#'   age_start            = 50,
-#'   age_end              = 80,
-#'   age_interval         = 10,
-#'   confounders_baseline = c("sex", "education_years", "bmi", "smoke_binary"),
-#'   use_future           = FALSE
+#' data(yll_toy)
+#' result <- estimate_yll(
+#'   yll_toy[1:500, ], time_var = "period", event_var = "event",
+#'   exposure_var = "hypertension", reference_level = "No", exposed_level = "Yes",
+#'   age_at_entry_var = "age", target_population = "unexposed",
+#'   age_start = 50, age_end = 70, age_interval = 10,
+#'   confounders_baseline = "sex", B = 0, use_future = FALSE
 #' )
-#' res$summary
-#' }
-#'
-#' @keywords internal
-estimate_yll_gformula <- function(
+#' result$summary
+#' @export
+estimate_yll <- function(
     data,
-    B = 1000,
-    seed = 1,
-    conf_level = 0.95,
-    method = c("normal", "percentile"),
-    show_progress = TRUE,
     id_var = "id",
     time_var,
     event_var,
@@ -97,466 +88,49 @@ estimate_yll_gformula <- function(
     reference_level = NULL,
     exposed_level = NULL,
     age_at_entry_var,
+    target_population,
     age_start = 50,
     age_end = 100,
     age_interval = 5,
     confounders_baseline = NULL,
-    estimand = c("ATT", "ATC", "ATE"),
-    integration = c("left_rectangle", "trapezoidal"),
-    use_future = TRUE
-) {
-  estimand <- match.arg(estimand)
-  method <- match.arg(method)
-  integration <- match.arg(integration)
-
-  yll_check_required_columns(
-    data,
-    c(id_var, time_var, event_var, exposure_var, age_at_entry_var, confounders_baseline)
-  )
-  yll_warn_entry_age_in_confounders(age_at_entry_var, confounders_baseline)
-
-  exposure_levels <- yll_resolve_binary_levels(
-    data[[exposure_var]],
-    reference_level = reference_level,
-    exposed_level = exposed_level
-  )
-  reference_level <- exposure_levels$reference_level
-  exposed_level <- exposure_levels$exposed_level
-
-  set.seed(seed)
-
-  ids <- unique(data[[id_var]])
-
-  point_est <- estimate_yll_gformula_single(
-    data = data,
-    id_var = id_var,
-    time_var = time_var,
-    event_var = event_var,
-    exposure_var = exposure_var,
-    reference_level = reference_level,
-    exposed_level = exposed_level,
-    age_at_entry_var = age_at_entry_var,
-    age_start = age_start,
-    age_end = age_end,
-    age_interval = age_interval,
-    confounders_baseline = confounders_baseline,
-    estimand = estimand,
-    integration = integration
-  )
-  marginal_survival_point <- attr(point_est, "marginal_curves")
-  conditional_survival_point <- attr(point_est, "conditional_curves")
-
-  if (B < 1L) {
-    warning("B = 0 so confidence intervals were not computed.", call. = FALSE)
-
-    return(yll_build_result_object(
-      point_est = point_est,
-      boot_df = tibble(),
-      summary_df = arrange(point_est, age_start),
-      meta = list(
-        B = B, seed = seed, conf_level = conf_level, method = method,
-        estimand = estimand, age_start = age_start, age_end = age_end,
-        age_interval = age_interval, integration = integration
-      ),
-      method = method,
-      marginal_survival_point = marginal_survival_point,
-      marginal_survival_boot  = NULL,
-      conditional_survival_point = conditional_survival_point,
-      conditional_survival_boot  = NULL
-    ))
-  }
-
-  one_boot <- function(b) {
-    sampled_ids <- yll_bootstrap_ids(ids)
-    boot_data <- yll_make_boot_data(data, id_var, sampled_ids)
-
-    res_b <- estimate_yll_gformula_single(
-      data = boot_data,
-      id_var = id_var,
-      time_var = time_var,
-      event_var = event_var,
-      exposure_var = exposure_var,
-      reference_level = reference_level,
-      exposed_level = exposed_level,
-      age_at_entry_var = age_at_entry_var,
-      age_start = age_start,
-      age_end = age_end,
-      age_interval = age_interval,
-      confounders_baseline = confounders_baseline,
-      estimand = estimand,
-      integration = integration
-    )
-    yll_one_boot_result(res_b, b = b)
-  }
-
-  boot_results <- yll_run_bootstrap(B, one_boot, use_future, show_progress)
-
-  boot_df <- bind_rows(lapply(boot_results, `[[`, "yll"))
-  marginal_survival_boot <- yll_collect_bootstrap_curves(boot_results)
-  conditional_survival_boot <- yll_collect_bootstrap_curves(boot_results, element = "conditional_curves")
-
-  summary <- point_est
-
-  if (identical(method, "percentile")) {
-    perc <- yll_ci_percentile(boot_df, conf_level) |>
-      rename_with(~ paste0(.x, "_perc"), -age_start)
-
-    summary <- left_join(summary, perc, by = "age_start")
-  }
-
-  if (identical(method, "normal")) {
-    norm <- yll_ci_normal(point_est, boot_df, conf_level) |>
-      rename_with(~ paste0(.x, "_norm"), -age_start)
-
-    summary <- left_join(summary, norm, by = "age_start")
-  }
-
-  summary <- arrange(summary, age_start)
-
-  yll_build_result_object(
-    point_est = point_est,
-    boot_df = boot_df,
-    summary_df = summary,
-    meta = list(
-      B = B, seed = seed, conf_level = conf_level, method = method,
-      estimand = estimand, age_start = age_start, age_end = age_end,
-      age_interval = age_interval, integration = integration
-    ),
-    method = method,
-    marginal_survival_point = marginal_survival_point,
-    marginal_survival_boot  = marginal_survival_boot,
-    conditional_survival_point = conditional_survival_point,
-    conditional_survival_boot  = conditional_survival_boot
-  )
-}
-
-# Run the B bootstrap iterations, picking the right dispatch backend based on
-# the user's preferences.
-#
-# Four code paths, one per (use_future, show_progress) combination:
-#
-#   * use_future + progress: `future_lapply` driven by a `progressr`
-#     progressor; works correctly across multisession workers because the
-#     handler is registered globally before the call.
-#   * use_future, no progress: plain `future_lapply`.
-#   * sequential + progress: classic `txtProgressBar` updated inside `lapply`.
-#   * sequential, no progress: plain `lapply`.
-#
-# `future.seed = TRUE` is set on every parallel path so each worker gets a
-# distinct, reproducible RNG stream — critical because each iteration draws a
-# fresh subject-level resample.
-#' @noRd
-yll_run_bootstrap <- function(B, one_boot, use_future, show_progress) {
-  if (use_future) {
-    if (show_progress) {
-      handlers(global = TRUE)
-      handlers("txtprogressbar")
-      return(with_progress({
-        p <- progressor(steps = B)
-        future_lapply(seq_len(B), function(b) { p(); one_boot(b) }, future.seed = TRUE)
-      }))
-    }
-    return(future_lapply(seq_len(B), one_boot, future.seed = TRUE))
-  }
-
-  if (show_progress) {
-    pb <- txtProgressBar(min = 0, max = B, style = 3)
-    on.exit(close(pb), add = TRUE)
-    return(lapply(seq_len(B), function(b) { setTxtProgressBar(pb, b); one_boot(b) }))
-  }
-
-  lapply(seq_len(B), one_boot)
-}
-
-#' Estimate YLL under arbitrary interventions and target population
-#'
-#' Generic g-formula interface. The two intervention scenarios and the target
-#' population are user-defined; the function returns the YLL between them with
-#' bootstrap CIs.
-#'
-#' @inheritParams estimate_yll_gformula
-#' @param intervention_reference,intervention_exposed Each is one of:
-#'   * a single exposure value (e.g. `"No"`),
-#'   * a numeric scalar in `[0, 1]` interpreted as the marginal probability of
-#'     being assigned the exposed level,
-#'   * a numeric / logical vector of length `nrow(data)` of subject-specific
-#'     probabilities, or
-#'   * a function `f(data)` returning either of the above (see
-#'     [yll_make_binary_stochastic_intervention()]).
-#' @param target_population Either `NULL` (use the full population) or a
-#'   function `f(data)` that returns a logical vector marking the subjects to
-#'   average over. Subjects can be selected on `data$expo_original`.
-#'
-#' @return The same list structure as [estimate_yll_gformula()].
-#'
-#' @seealso [yll_make_binary_stochastic_intervention()],
-#'   [estimate_yll_gformula_binary_stochastic_vs_natural()].
-#'
-#' @keywords internal
-estimate_yll_gformula_intervention <- function(
-    data,
-    intervention_reference,
-    intervention_exposed,
-    target_population = NULL,
     B = 1000,
     seed = 1,
     conf_level = 0.95,
-    method = c("normal", "percentile"),
-    show_progress = TRUE,
-    id_var = "id",
-    time_var,
-    event_var,
-    exposure_var,
-    reference_level = NULL,
-    exposed_level = NULL,
-    age_at_entry_var,
-    age_start = 50,
-    age_end = 100,
-    age_interval = 5,
-    confounders_baseline = NULL,
+    ci_method = c("normal", "percentile"),
     integration = c("left_rectangle", "trapezoidal"),
+    show_progress = TRUE,
     use_future = TRUE
 ) {
-  method <- match.arg(method)
-  integration <- match.arg(integration)
-
-  yll_check_required_columns(
-    data,
-    c(id_var, time_var, event_var, exposure_var, age_at_entry_var, confounders_baseline)
-  )
-  yll_warn_entry_age_in_confounders(age_at_entry_var, confounders_baseline)
-
-  exposure_levels <- yll_resolve_binary_levels(
-    data[[exposure_var]],
-    reference_level = reference_level,
-    exposed_level = exposed_level
-  )
-  reference_level <- exposure_levels$reference_level
-  exposed_level <- exposure_levels$exposed_level
-
-  set.seed(seed)
-
-  ids <- unique(data[[id_var]])
-
-  point_est <- estimate_yll_gformula_engine_single(
-    data = data,
-    id_var = id_var,
-    time_var = time_var,
-    event_var = event_var,
-    exposure_var = exposure_var,
-    reference_level = reference_level,
-    exposed_level = exposed_level,
-    age_at_entry_var = age_at_entry_var,
-    age_start = age_start,
-    age_end = age_end,
-    age_interval = age_interval,
-    confounders_baseline = confounders_baseline,
-    intervention_reference = intervention_reference,
-    intervention_exposed = intervention_exposed,
-    target_population = target_population,
-    integration = integration
-  )
-  marginal_survival_point <- attr(point_est, "marginal_curves")
-  conditional_survival_point <- attr(point_est, "conditional_curves")
-
-  if (B < 1L) {
-    warning("B = 0 so confidence intervals were not computed.", call. = FALSE)
-
-    return(yll_build_result_object(
-      point_est = point_est,
-      boot_df = tibble(),
-      summary_df = arrange(point_est, age_start),
-      meta = list(
-        B = B, seed = seed, conf_level = conf_level, method = method,
-        age_start = age_start, age_end = age_end,
-        age_interval = age_interval, integration = integration
-      ),
-      method = method,
-      marginal_survival_point = marginal_survival_point,
-      marginal_survival_boot  = NULL,
-      conditional_survival_point = conditional_survival_point,
-      conditional_survival_boot  = NULL
-    ))
-  }
-
-  one_boot <- function(b) {
-    sampled_ids <- yll_bootstrap_ids(ids)
-    boot_data <- yll_make_boot_data(data, id_var, sampled_ids)
-
-    res_b <- estimate_yll_gformula_engine_single(
-      data = boot_data,
-      id_var = id_var,
-      time_var = time_var,
-      event_var = event_var,
-      exposure_var = exposure_var,
-      reference_level = reference_level,
-      exposed_level = exposed_level,
-      age_at_entry_var = age_at_entry_var,
-      age_start = age_start,
-      age_end = age_end,
-      age_interval = age_interval,
-      confounders_baseline = confounders_baseline,
-      intervention_reference = intervention_reference,
-      intervention_exposed = intervention_exposed,
-      target_population = target_population,
-      integration = integration
-    )
-    yll_one_boot_result(res_b, b = b)
-  }
-
-  boot_results <- yll_run_bootstrap(B, one_boot, use_future, show_progress)
-
-  boot_df <- bind_rows(lapply(boot_results, `[[`, "yll"))
-  marginal_survival_boot <- yll_collect_bootstrap_curves(boot_results)
-  conditional_survival_boot <- yll_collect_bootstrap_curves(boot_results, element = "conditional_curves")
-
-  summary <- point_est
-
-  if (identical(method, "percentile")) {
-    perc <- yll_ci_percentile(boot_df, conf_level) |>
-      rename_with(~ paste0(.x, "_perc"), -age_start)
-
-    summary <- left_join(summary, perc, by = "age_start")
-  }
-
-  if (identical(method, "normal")) {
-    norm <- yll_ci_normal(point_est, boot_df, conf_level) |>
-      rename_with(~ paste0(.x, "_norm"), -age_start)
-
-    summary <- left_join(summary, norm, by = "age_start")
-  }
-
-  summary <- arrange(summary, age_start)
-
-  yll_build_result_object(
-    point_est = point_est,
-    boot_df = boot_df,
-    summary_df = summary,
-    meta = list(
-      B = B, seed = seed, conf_level = conf_level, method = method,
-      age_start = age_start, age_end = age_end,
-      age_interval = age_interval, integration = integration
-    ),
-    method = method,
-    marginal_survival_point = marginal_survival_point,
-    marginal_survival_boot  = marginal_survival_boot,
-    conditional_survival_point = conditional_survival_point,
-    conditional_survival_boot  = conditional_survival_boot
-  )
-}
-
-#' Compare two binary stochastic interventions
-#'
-#' Builds the two intervention specifications from the four conditional
-#' probabilities `P(A* = exposed | A_obs)` and forwards them to
-#' [estimate_yll_gformula_intervention()].
-#'
-#' @inheritParams estimate_yll_gformula_intervention
-#' @param prob_exposed_if_unexposed_reference,prob_exposed_if_exposed_reference
-#'   Probabilities defining the *reference* intervention.
-#' @param prob_exposed_if_unexposed_exposed,prob_exposed_if_exposed_exposed
-#'   Probabilities defining the *exposed* intervention.
-#'
-#' @return Same list structure as [estimate_yll_gformula()].
-#' @keywords internal
-estimate_yll_gformula_binary_stochastic <- function(
-    data,
-    prob_exposed_if_unexposed_reference,
-    prob_exposed_if_exposed_reference,
-    prob_exposed_if_unexposed_exposed,
-    prob_exposed_if_exposed_exposed,
-    target_population = NULL,
-    B = 1000,
-    seed = 1,
-    conf_level = 0.95,
-    method = c("normal", "percentile"),
-    show_progress = TRUE,
-    id_var = "id",
-    time_var,
-    event_var,
-    exposure_var,
-    reference_level = NULL,
-    exposed_level = NULL,
-    age_at_entry_var,
-    age_start = 50,
-    age_end = 100,
-    age_interval = 5,
-    confounders_baseline = NULL,
-    integration = c("left_rectangle", "trapezoidal"),
-    use_future = TRUE
-) {
-  integration <- match.arg(integration)
-
-  exposure_levels <- yll_resolve_binary_levels(
-    data[[exposure_var]],
-    reference_level = reference_level,
-    exposed_level = exposed_level
-  )
-  reference_level <- exposure_levels$reference_level
-  exposed_level <- exposure_levels$exposed_level
-
-  intervention_reference <- yll_make_binary_stochastic_intervention(
-    prob_exposed_if_unexposed = prob_exposed_if_unexposed_reference,
-    prob_exposed_if_exposed = prob_exposed_if_exposed_reference,
-    reference_level = reference_level,
-    exposed_level = exposed_level
-  )
-
-  intervention_exposed <- yll_make_binary_stochastic_intervention(
-    prob_exposed_if_unexposed = prob_exposed_if_unexposed_exposed,
-    prob_exposed_if_exposed = prob_exposed_if_exposed_exposed,
-    reference_level = reference_level,
-    exposed_level = exposed_level
-  )
-
-  estimate_yll_gformula_intervention(
-    data = data,
-    intervention_reference = intervention_reference,
-    intervention_exposed = intervention_exposed,
-    target_population = target_population,
-    B = B,
-    seed = seed,
-    conf_level = conf_level,
-    method = method,
+  yll_estimate(
+    data = data, id_var = id_var, time_var = time_var, event_var = event_var,
+    exposure_var = exposure_var, reference_level = reference_level,
+    exposed_level = exposed_level, age_at_entry_var = age_at_entry_var,
+    age_start = age_start, age_end = age_end, age_interval = age_interval,
+    confounders_baseline = confounders_baseline, B = B, seed = seed,
+    conf_level = conf_level, integration = match.arg(integration),
     show_progress = show_progress,
-    id_var = id_var,
-    time_var = time_var,
-    event_var = event_var,
-    exposure_var = exposure_var,
-    reference_level = reference_level,
-    exposed_level = exposed_level,
-    age_at_entry_var = age_at_entry_var,
-    age_start = age_start,
-    age_end = age_end,
-    age_interval = age_interval,
-    confounders_baseline = confounders_baseline,
-    integration = integration,
-    use_future = use_future
+    model = "pooled_logistic", target_population = match.arg(target_population,
+      c("all", "exposed", "unexposed")),
+    ci_method = match.arg(ci_method), use_future = use_future
   )
 }
 
-#' Compare a binary stochastic intervention against the natural course
+#' Estimate standardized YLL using a Poisson model
 #'
-#' Convenience wrapper around [estimate_yll_gformula_binary_stochastic()] in
-#' which the *reference* scenario is fixed to the natural course (every subject
-#' keeps their observed exposure).
-#'
-#' @inheritParams estimate_yll_gformula_binary_stochastic
-#' @param prob_exposed_if_unexposed,prob_exposed_if_exposed Probabilities
-#'   defining the comparison intervention.
-#'
-#' @return Same list structure as [estimate_yll_gformula()].
-#' @keywords internal
-estimate_yll_gformula_binary_stochastic_vs_natural <- function(
+#' Predict both exposure scenarios for every participant and average the
+#' individual conditional survival curves over the full analytic sample.
+#' This comparator changes the mortality model, not the direction of YLL.
+#' Confidence intervals use the normal approximation to the participant
+#' bootstrap distribution. They are pointwise intervals.
+#' @inheritParams estimate_yll
+#' @param prediction_interval Spacing of prediction ages, in years. For the
+#'   Poisson estimator this also determines the age-splitting interval.
+#' @return The same five-element list as [estimate_yll()], with
+#'   the full sample as target population and normal-approximation intervals.
+#' @seealso [estimate_yll()], [plot_yll()], [plot_survival()]
+#' @export
+estimate_yll_poisson <- function(
     data,
-    prob_exposed_if_unexposed,
-    prob_exposed_if_exposed,
-    target_population = NULL,
-    B = 1000,
-    seed = 1,
-    conf_level = 0.95,
-    method = c("normal", "percentile"),
-    show_progress = TRUE,
     id_var = "id",
     time_var,
     event_var,
@@ -568,63 +142,77 @@ estimate_yll_gformula_binary_stochastic_vs_natural <- function(
     age_end = 100,
     age_interval = 5,
     confounders_baseline = NULL,
+    B = 1000,
+    seed = 1,
+    conf_level = 0.95,
+    prediction_interval = 1,
     integration = c("left_rectangle", "trapezoidal"),
-    use_future = TRUE
+    show_progress = TRUE
 ) {
-  integration <- match.arg(integration)
-
-  estimate_yll_gformula_binary_stochastic(
-    data = data,
-    prob_exposed_if_unexposed_reference = 0,
-    prob_exposed_if_exposed_reference = 1,
-    prob_exposed_if_unexposed_exposed = prob_exposed_if_unexposed,
-    prob_exposed_if_exposed_exposed = prob_exposed_if_exposed,
-    target_population = target_population,
-    B = B,
-    seed = seed,
-    conf_level = conf_level,
-    method = method,
+  yll_estimate(
+    data = data, id_var = id_var, time_var = time_var, event_var = event_var,
+    exposure_var = exposure_var, reference_level = reference_level,
+    exposed_level = exposed_level, age_at_entry_var = age_at_entry_var,
+    age_start = age_start, age_end = age_end, age_interval = age_interval,
+    confounders_baseline = confounders_baseline, B = B, seed = seed,
+    conf_level = conf_level, integration = match.arg(integration),
     show_progress = show_progress,
-    id_var = id_var,
-    time_var = time_var,
-    event_var = event_var,
-    exposure_var = exposure_var,
-    reference_level = reference_level,
-    exposed_level = exposed_level,
-    age_at_entry_var = age_at_entry_var,
-    age_start = age_start,
-    age_end = age_end,
-    age_interval = age_interval,
-    confounders_baseline = confounders_baseline,
-    integration = integration,
-    use_future = use_future
+    model = "poisson", target_population = "all",
+    ci_method = "normal", use_future = FALSE, prediction_interval = prediction_interval
   )
 }
 
-#' Estimand-specific wrappers
+#' Estimate standardized YLL using a Royston-Parmar model
 #'
-#' Thin wrappers around [estimate_yll_gformula()] that pre-fill the
-#' `estimand` argument.
-#'
-#' @param ... Arguments forwarded to [estimate_yll_gformula()].
-#' @return Same list structure as [estimate_yll_gformula()].
-#' @name estimate_yll_gformula_estimand_wrappers
-NULL
-
-#' @rdname estimate_yll_gformula_estimand_wrappers
-#' @keywords internal
-estimate_yll_gformula_ate <- function(...) {
-  estimate_yll_gformula(..., estimand = "ATE")
-}
-
-#' @rdname estimate_yll_gformula_estimand_wrappers
-#' @keywords internal
-estimate_yll_gformula_att <- function(...) {
-  estimate_yll_gformula(..., estimand = "ATT")
-}
-
-#' @rdname estimate_yll_gformula_estimand_wrappers
-#' @keywords internal
-estimate_yll_gformula_atc <- function(...) {
-  estimate_yll_gformula(..., estimand = "ATC")
+#' Predict both exposure scenarios for every participant and average the
+#' individual conditional survival curves over the full analytic sample.
+#' This comparator changes the mortality model, not the direction of YLL.
+#' Confidence intervals use the normal approximation to the participant
+#' bootstrap distribution. They are pointwise intervals.
+#' @inheritParams estimate_yll
+#' @param prediction_interval Spacing of prediction ages, in years. For the
+#'   Poisson estimator this also determines the age-splitting interval.
+#' @param rp_df Degrees of freedom for the baseline log cumulative hazard
+#'   spline, passed to rstpm2::stpm2().
+#' @param rp_model `"combined"` fits one model including exposure; `"stratified"`
+#'   fits a separate model in each exposure group. The optional rstpm2 package
+#'   is required. Inspect warnings and bootstrap failures for unstable fits.
+#' @return The same five-element list as [estimate_yll()], with
+#'   the full sample as target population and normal-approximation intervals.
+#' @seealso [estimate_yll()], [plot_yll()], [plot_survival()]
+#' @export
+estimate_yll_royston_parmar <- function(
+    data,
+    id_var = "id",
+    time_var,
+    event_var,
+    exposure_var,
+    reference_level = NULL,
+    exposed_level = NULL,
+    age_at_entry_var,
+    age_start = 50,
+    age_end = 100,
+    age_interval = 5,
+    confounders_baseline = NULL,
+    B = 1000,
+    seed = 1,
+    conf_level = 0.95,
+    prediction_interval = 1,
+    rp_df = 4,
+    rp_model = c("combined", "stratified"),
+    integration = c("left_rectangle", "trapezoidal"),
+    show_progress = TRUE
+) {
+  yll_estimate(
+    data = data, id_var = id_var, time_var = time_var, event_var = event_var,
+    exposure_var = exposure_var, reference_level = reference_level,
+    exposed_level = exposed_level, age_at_entry_var = age_at_entry_var,
+    age_start = age_start, age_end = age_end, age_interval = age_interval,
+    confounders_baseline = confounders_baseline, B = B, seed = seed,
+    conf_level = conf_level, integration = match.arg(integration),
+    show_progress = show_progress,
+    model = "royston_parmar", target_population = "all",
+    ci_method = "normal", use_future = FALSE, prediction_interval = prediction_interval,
+    rp_df = rp_df, rp_model = match.arg(rp_model)
+  )
 }
