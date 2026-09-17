@@ -14,6 +14,16 @@ The earlier website URL note was resolved by publishing the pkgdown site.
 The local HTML Tidy note concerns the available validator, not an R code or
 documentation build failure. Examples, tests, vignettes and the PDF manual pass.
 
+## Automated checks and documentation
+
+GitHub Actions checks passed on macOS (release), Windows (release), and Linux
+(release, oldrel-1, devel). The workflow checks examples, tests and vignettes.
+The pkgdown site is published through GitHub Pages. Its rendered text and plots
+were inspected, and all 27 internal page/image URLs returned HTTP 200.
+
+Workflow records: https://github.com/ShuntaroS/estimandYLL/actions
+Documentation: https://shuntaros.github.io/estimandYLL/
+
 ## Statistical validation
 
 The full 5,000-person synthetic dataset was evaluated against commit aa9973e
