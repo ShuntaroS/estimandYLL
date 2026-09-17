@@ -27,3 +27,7 @@
 - Replace obsolete documentation with an English tutorial,
   interpretation and comparator articles, a migration guide, and a
   Japanese introduction.
+- Show public YLL examples at five-year starting-age intervals with 95%
+  confidence intervals from 1,000 bootstrap replicates. Include the
+  complete saved synthetic result and reproduction scripts, including a
+  two-worker future check.

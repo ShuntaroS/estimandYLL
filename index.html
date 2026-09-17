@@ -76,17 +76,24 @@
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/ShuntaroS/estimandYLL" class="external-link">estimandYLL</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">yll_toy</span><span class="op">)</span></span>
+<span><span class="va">previous_plan</span> <span class="op">&lt;-</span> <span class="fu">future</span><span class="fu">::</span><span class="fu"><a href="https://future.futureverse.org/reference/plan.html" class="external-link">plan</a></span><span class="op">(</span><span class="fu">future</span><span class="fu">::</span><span class="va"><a href="https://future.futureverse.org/reference/multisession.html" class="external-link">multisession</a></span>, workers <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/estimate_yll.html">estimate_yll</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">yll_toy</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">500</span>, <span class="op">]</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">yll_toy</span>,</span>
 <span>  time_var <span class="op">=</span> <span class="st">"period"</span>, event_var <span class="op">=</span> <span class="st">"event"</span>,</span>
 <span>  exposure_var <span class="op">=</span> <span class="st">"hypertension"</span>,</span>
 <span>  reference_level <span class="op">=</span> <span class="st">"No"</span>, exposed_level <span class="op">=</span> <span class="st">"Yes"</span>,</span>
 <span>  age_at_entry_var <span class="op">=</span> <span class="st">"age"</span>, target_population <span class="op">=</span> <span class="st">"unexposed"</span>,</span>
-<span>  age_start <span class="op">=</span> <span class="fl">50</span>, age_end <span class="op">=</span> <span class="fl">70</span>, age_interval <span class="op">=</span> <span class="fl">10</span>,</span>
-<span>  confounders_baseline <span class="op">=</span> <span class="st">"sex"</span>, B <span class="op">=</span> <span class="fl">0</span>, use_future <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  age_start <span class="op">=</span> <span class="fl">40</span>, age_end <span class="op">=</span> <span class="fl">90</span>, age_interval <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>  confounders_baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"education_years"</span>, <span class="st">"bmi"</span>, <span class="st">"smoke_binary"</span><span class="op">)</span>,</span>
+<span>  B <span class="op">=</span> <span class="fl">1000</span>, seed <span class="op">=</span> <span class="fl">20260917</span>, ci_method <span class="op">=</span> <span class="st">"normal"</span>, use_future <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
+<span><span class="fu">future</span><span class="fu">::</span><span class="fu"><a href="https://future.futureverse.org/reference/plan.html" class="external-link">plan</a></span><span class="op">(</span><span class="va">previous_plan</span><span class="op">)</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">summary</span></span></code></pre></div>
-<p>This quick example uses 500 simulated people and skips confidence intervals. For an analysis, choose the age window, covariates and target population for your question, and use an adequate number of bootstrap replicates, for example <code>B = 2000</code>. The data are synthetic; this example does not reproduce the paper’s cohort results. No real participant records are distributed.</p>
+<p>This example uses all 5,000 simulated people, 1,000 participant bootstrap replicates, and starting ages from 40 to 90 in five-year steps. The figures below include 95% pointwise confidence intervals. The data are synthetic; this example does not reproduce the paper’s cohort results. No real participant records are distributed. Choose the age window, covariates, target population, and number of replicates for your own analysis.</p>
+<p>The main estimator uses the caller’s <code>future</code> plan when <code>use_future = TRUE</code> (the default). The code above requests two separate R workers and then restores the previous plan. Merely setting <code>use_future = TRUE</code> does not start workers.</p>
+<p>To inspect the published figures without rerunning the bootstrap, load the saved result included with the package. The full reproduction script is in <a href="https://github.com/ShuntaroS/estimandYLL/tree/main/notes/published-example" class="external-link">notes/published-example</a>.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"yll-example.rds"</span>, package <span class="op">=</span> <span class="st">"estimandYLL"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><code>age_end</code> limits every integral. <code>age_interval</code> controls the spacing between reported starting ages; the main estimator still integrates on a one-year grid.</p>
 </div>
 <div class="section level2">
@@ -136,11 +143,20 @@
 <h2 id="results-and-plots">Results and plots<a class="anchor" aria-label="anchor" href="#results-and-plots"></a>
 </h2>
 <p><code>result$summary</code> contains <code>starting_age</code>, <code>erl_reference</code>, <code>erl_exposed</code>, <code>yll</code>, <code>yll_se</code>, <code>ci_low</code> and <code>ci_high</code>. Lifetimes, their difference and uncertainty are measured in years. The remaining elements are <code>bootstrap_estimates</code>, <code>survival_curves</code>, <code>bootstrap_survival_curves</code>, and <code>meta</code>.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/plot_yll.html">plot_yll</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"YLL among participants without hypertension"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/plot_yll.html">plot_yll</a></span><span class="op">(</span><span class="va">result</span>, conf_band <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"YLL among participants without hypertension"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/plot_survival.html">plot_survival</a></span><span class="op">(</span><span class="va">result</span>, age_start <span class="op">=</span> <span class="fl">50</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_bw</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co"># ggsave("yll.png", plot_yll(result), width = 6, height = 4, dpi = 300)</span></span></code></pre></div>
+<div class="float">
+<img src="reference/figures/yll-example.png" alt="YLL with 95% pointwise confidence intervals from 1,000 bootstrap replicates"><div class="figcaption">YLL with 95% pointwise confidence intervals from 1,000 bootstrap replicates</div>
+</div>
+<p>Points show YLL and error bars show 95% confidence intervals, at five-year starting-age intervals. At age 90 the integration window is empty, so YLL and its interval are zero.</p>
+<div class="float">
+<img src="reference/figures/survival-example.png" alt="Standardized survival from age 50 with 95% pointwise confidence intervals"><div class="figcaption">Standardized survival from age 50 with 95% pointwise confidence intervals</div>
+</div>
+<p>Survival is restarted at one at age 50. Shaded areas show 95% pointwise confidence intervals for each exposure scenario.</p>
 <p>All plots are editable ggplot objects. The optional ggplot2 package is needed only for plotting. Poisson and Royston-Parmar comparators are available through <code><a href="reference/estimate_yll_poisson.html">estimate_yll_poisson()</a></code> and <code><a href="reference/estimate_yll_royston_parmar.html">estimate_yll_royston_parmar()</a></code>; they standardize over the full sample. The latter requires the optional rstpm2 package.</p>
 </div>
 <div class="section level2">

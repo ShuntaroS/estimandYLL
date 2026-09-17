@@ -82,27 +82,153 @@
 モデルは全解析対象者で推定し、予測した生存曲線を平均する集団だけを変えます。</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">yll_toy</span><span class="op">)</span></span>
+<span><span class="va">previous_plan</span> <span class="op">&lt;-</span> <span class="fu">future</span><span class="fu">::</span><span class="fu"><a href="https://future.futureverse.org/reference/plan.html" class="external-link">plan</a></span><span class="op">(</span><span class="fu">future</span><span class="fu">::</span><span class="va"><a href="https://future.futureverse.org/reference/multisession.html" class="external-link">multisession</a></span>, workers <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimate_yll.html">estimate_yll</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">yll_toy</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">500</span>, <span class="op">]</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">yll_toy</span>,</span>
 <span>  time_var <span class="op">=</span> <span class="st">"period"</span>, event_var <span class="op">=</span> <span class="st">"event"</span>,</span>
 <span>  exposure_var <span class="op">=</span> <span class="st">"hypertension"</span>,</span>
 <span>  reference_level <span class="op">=</span> <span class="st">"No"</span>, exposed_level <span class="op">=</span> <span class="st">"Yes"</span>,</span>
 <span>  age_at_entry_var <span class="op">=</span> <span class="st">"age"</span>, target_population <span class="op">=</span> <span class="st">"unexposed"</span>,</span>
-<span>  age_start <span class="op">=</span> <span class="fl">50</span>, age_end <span class="op">=</span> <span class="fl">70</span>, age_interval <span class="op">=</span> <span class="fl">10</span>,</span>
-<span>  confounders_baseline <span class="op">=</span> <span class="st">"sex"</span>, B <span class="op">=</span> <span class="fl">0</span>, use_future <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  age_start <span class="op">=</span> <span class="fl">40</span>, age_end <span class="op">=</span> <span class="fl">90</span>, age_interval <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>  confounders_baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"education_years"</span>, <span class="st">"bmi"</span>, <span class="st">"smoke_binary"</span><span class="op">)</span>,</span>
+<span>  B <span class="op">=</span> <span class="fl">1000</span>, seed <span class="op">=</span> <span class="fl">20260917</span>, ci_method <span class="op">=</span> <span class="st">"normal"</span>, use_future <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">summary</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 7</span></span></span>
-<span><span class="co">#&gt;   starting_age erl_reference erl_exposed   yll yll_se ci_low ci_high</span></span>
-<span><span class="co">#&gt;          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>           50         18.7        18.3  0.393     <span style="color: #BB0000;">NA</span>     <span style="color: #BB0000;">NA</span>      <span style="color: #BB0000;">NA</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>           60          9.45        8.95 0.505     <span style="color: #BB0000;">NA</span>     <span style="color: #BB0000;">NA</span>      <span style="color: #BB0000;">NA</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>           70          0           0    0         <span style="color: #BB0000;">NA</span>     <span style="color: #BB0000;">NA</span>      <span style="color: #BB0000;">NA</span></span></span></code></pre></div>
-<p>この例では、合成データの500人を使い、高血圧のない人を対象集団とします。
-50歳・60歳・70歳から70歳までの結果を1回の呼び出しで計算します。
-<code>age_interval</code>
+<span><span class="fu">future</span><span class="fu">::</span><span class="fu"><a href="https://future.futureverse.org/reference/plan.html" class="external-link">plan</a></span><span class="op">(</span><span class="va">previous_plan</span><span class="op">)</span></span></code></pre></div>
+<p>この例では、合成データの5,000人全員を使い、高血圧のない人を対象集団とします。
+ブートストラップは1,000回です。40歳から90歳まで、5歳刻みの開始年齢について、
+90歳までの YLL と95%信頼区間を計算します。</p>
+<p>上の計算は実行済みです。図を描くたびに1,000回の推定を繰り返す必要がないよう、
+結果をパッケージに同梱しています。この入門記事の表と図も、次の保存済み結果から作っています。
+<a href="https://github.com/ShuntaroS/estimandYLL/tree/main/notes/published-example" class="external-link">再実行用スクリプト</a>
+も公開しています。</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"yll-example.rds"</span>, package <span class="op">=</span> <span class="st">"estimandYLL"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">summary</span>, digits <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<colgroup>
+<col width="19%">
+<col width="21%">
+<col width="18%">
+<col width="7%">
+<col width="10%">
+<col width="10%">
+<col width="12%">
+</colgroup>
+<thead><tr class="header">
+<th align="right">starting_age</th>
+<th align="right">erl_reference</th>
+<th align="right">erl_exposed</th>
+<th align="right">yll</th>
+<th align="right">yll_se</th>
+<th align="right">ci_low</th>
+<th align="right">ci_high</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="right">40</td>
+<td align="right">41.94</td>
+<td align="right">36.28</td>
+<td align="right">5.66</td>
+<td align="right">0.85</td>
+<td align="right">3.99</td>
+<td align="right">7.33</td>
+</tr>
+<tr class="even">
+<td align="right">45</td>
+<td align="right">37.11</td>
+<td align="right">31.68</td>
+<td align="right">5.42</td>
+<td align="right">0.68</td>
+<td align="right">4.09</td>
+<td align="right">6.75</td>
+</tr>
+<tr class="odd">
+<td align="right">50</td>
+<td align="right">32.39</td>
+<td align="right">27.14</td>
+<td align="right">5.25</td>
+<td align="right">0.62</td>
+<td align="right">4.03</td>
+<td align="right">6.46</td>
+</tr>
+<tr class="even">
+<td align="right">55</td>
+<td align="right">27.83</td>
+<td align="right">22.73</td>
+<td align="right">5.10</td>
+<td align="right">0.60</td>
+<td align="right">3.93</td>
+<td align="right">6.28</td>
+</tr>
+<tr class="odd">
+<td align="right">60</td>
+<td align="right">23.46</td>
+<td align="right">18.62</td>
+<td align="right">4.84</td>
+<td align="right">0.59</td>
+<td align="right">3.67</td>
+<td align="right">6.00</td>
+</tr>
+<tr class="even">
+<td align="right">65</td>
+<td align="right">19.29</td>
+<td align="right">14.89</td>
+<td align="right">4.39</td>
+<td align="right">0.60</td>
+<td align="right">3.22</td>
+<td align="right">5.56</td>
+</tr>
+<tr class="odd">
+<td align="right">70</td>
+<td align="right">15.36</td>
+<td align="right">11.35</td>
+<td align="right">4.01</td>
+<td align="right">0.65</td>
+<td align="right">2.74</td>
+<td align="right">5.28</td>
+</tr>
+<tr class="even">
+<td align="right">75</td>
+<td align="right">11.67</td>
+<td align="right">8.13</td>
+<td align="right">3.54</td>
+<td align="right">0.70</td>
+<td align="right">2.17</td>
+<td align="right">4.91</td>
+</tr>
+<tr class="odd">
+<td align="right">80</td>
+<td align="right">8.10</td>
+<td align="right">5.41</td>
+<td align="right">2.69</td>
+<td align="right">0.63</td>
+<td align="right">1.45</td>
+<td align="right">3.93</td>
+</tr>
+<tr class="even">
+<td align="right">85</td>
+<td align="right">4.42</td>
+<td align="right">3.18</td>
+<td align="right">1.24</td>
+<td align="right">0.34</td>
+<td align="right">0.58</td>
+<td align="right">1.90</td>
+</tr>
+<tr class="odd">
+<td align="right">90</td>
+<td align="right">0.00</td>
+<td align="right">0.00</td>
+<td align="right">0.00</td>
+<td align="right">0.00</td>
+<td align="right">0.00</td>
+<td align="right">0.00</td>
+</tr>
+</tbody>
+</table>
+<p><code>age_interval</code>
 は結果を表示する開始年齢の間隔であり、主推定法の計算は1年刻みです。
-開始年齢が上限年齢と同じなら、ERL と YLL は0になります。</p>
+開始年齢が上限の90歳と同じなら、積分する区間がないため ERL と YLL
+は0になります。</p>
 </div>
 <div class="section level2">
 <h2 id="推定値を解釈します">推定値を解釈します<a class="anchor" aria-label="anchor" href="#%E6%8E%A8%E5%AE%9A%E5%80%A4%E3%82%92%E8%A7%A3%E9%87%88%E3%81%97%E3%81%BE%E3%81%99"></a>
@@ -122,24 +248,43 @@
 <div class="section level2">
 <h2 id="信頼区間と図を確認します">信頼区間と図を確認します<a class="anchor" aria-label="anchor" href="#%E4%BF%A1%E9%A0%BC%E5%8C%BA%E9%96%93%E3%81%A8%E5%9B%B3%E3%82%92%E7%A2%BA%E8%AA%8D%E3%81%97%E3%81%BE%E3%81%99"></a>
 </h2>
-<p><code>B = 0</code>
-は点推定だけを計算する指定です。実際の解析では、例えば
-<code>B = 2000</code>
-として個人単位のブートストラップを行います。<code>ci_method = "normal"</code>
-は 標準誤差を用いる正規近似、<code>"percentile"</code>
+<p>この公開例では <code>B = 1000</code>
+として個人単位のブートストラップを行いました。
+<code>ci_method = "normal"</code> は
+標準誤差を用いる正規近似、<code>"percentile"</code>
 は反復推定値の分位点による区間です。
 どちらも個人を復元抽出するノンパラメトリック・ブートストラップです。
-区間は年齢ごとのもので、曲線全体を同時に覆う信頼帯ではありません。</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+区間は年齢ごとのもので、曲線全体を同時に覆う信頼帯ではありません。
+<code>B = 0</code>
+と指定すると点推定だけを計算するため、図にも信頼区間は表示されません。</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"ggplot2"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="../reference/plot_yll.html">plot_yll</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span> <span class="op">+</span> <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_bw</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="../reference/plot_yll.html">plot_yll</a></span><span class="op">(</span><span class="va">result</span>, conf_band <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">+</span> <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_bw</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="../reference/plot_survival.html">plot_survival</a></span><span class="op">(</span><span class="va">result</span>, age_start <span class="op">=</span> <span class="fl">50</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
 <p><img src="getting-started-ja_files/figure-html/plots-ja-1.png" class="r-plt" alt="" width="576"><img src="getting-started-ja_files/figure-html/plots-ja-2.png" class="r-plt" alt="" width="576"></p>
+<p>YLL の図は、5歳刻みの点推定と95%信頼区間をエラーバーで表示します。
+生存曲線の図は、同じ1,000反復から求めた95%信頼区間を帯で表示します。</p>
 <p>返り値は編集可能な <code>ggplot</code>
 オブジェクトです。<code>+ ggplot2::labs()</code> でラベルを、
 <code>+ ggplot2::theme()</code>
 で外観を変更し、<code><a href="https://ggplot2.tidyverse.org/reference/ggsave.html" class="external-link">ggplot2::ggsave()</a></code> で保存できます。</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggsave.html" class="external-link">ggsave</a></span><span class="op">(</span><span class="st">"yll.png"</span>, <span class="fu"><a href="../reference/plot_yll.html">plot_yll</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span>, width <span class="op">=</span> <span class="fl">6</span>, height <span class="op">=</span> <span class="fl">4</span>, dpi <span class="op">=</span> <span class="fl">300</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="future-による並列実行を使います">future による並列実行を使います<a class="anchor" aria-label="anchor" href="#future-%E3%81%AB%E3%82%88%E3%82%8B%E4%B8%A6%E5%88%97%E5%AE%9F%E8%A1%8C%E3%82%92%E4%BD%BF%E3%81%84%E3%81%BE%E3%81%99"></a>
+</h2>
+<p>主関数 <code><a href="../reference/estimate_yll.html">estimate_yll()</a></code> は <code>use_future = TRUE</code>
+が既定です。 実際の並列化は、呼び出す側で指定した
+<code><a href="https://future.futureverse.org/reference/plan.html" class="external-link">future::plan()</a></code> に従います。 上の例では
+<code>multisession</code> で2つの R
+ワーカーを起動し、計算後に元の設定に戻しています。
+<code>use_future = TRUE</code> だけではワーカーは起動しません。 Poisson
+法と Royston–Parmar 法の比較用関数は、現在は逐次実行です。</p>
+<p>同じシードと同じ実行方式で繰り返した結果には再現性があります。
+<code>future</code> を使わない逐次実行と <code>future</code>
+を使う実行とでは、乱数列が異なる場合があります。</p>
 </div>
 <div class="section level2">
 <h2 id="解析時の前提を確認します">解析時の前提を確認します<a class="anchor" aria-label="anchor" href="#%E8%A7%A3%E6%9E%90%E6%99%82%E3%81%AE%E5%89%8D%E6%8F%90%E3%82%92%E7%A2%BA%E8%AA%8D%E3%81%97%E3%81%BE%E3%81%99"></a>
