@@ -8,7 +8,7 @@
 ## Citation
 
 Source:
-[`inst/CITATION`](https://github.com/ShuntaroS/estimandYLL/blob/main/inst/CITATION)
+[`inst/CITATION`](https://github.com/ShuntaroS/estimandYLL/blob/v0.1.0/inst/CITATION)
 
 Sato S (2026). *estimandYLL: Years of Life Lost via the G-Formula*. R
 package version 0.1.0, <https://github.com/ShuntaroS/estimandYLL>.
