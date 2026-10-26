@@ -1,6 +1,6 @@
 Package: estimandYLL
 Title: Years of Life Lost via the G-Formula
-Version: 0.1.0
+Version: 0.2.0
 Authors@R:
     person(
       "Shuntaro", "Sato",
@@ -15,8 +15,10 @@ Description: Estimates years of life lost as the difference in restricted
     expected residual lifetime between two binary exposure scenarios on the
     attained-age scale. A pooled logistic parametric g-formula standardizes
     individual conditional survival curves over an explicitly selected
-    baseline population. Includes Poisson and Royston-Parmar model comparators,
-    participant bootstrap confidence intervals, and plotting helpers.
+    baseline population. Confidence intervals come from a participant
+    bootstrap or from the empirical sandwich variance of stacked estimating
+    equations, which needs a single model fit. Includes Poisson and
+    Royston-Parmar model comparators and plotting helpers.
 License: MIT + file LICENSE
 URL: https://github.com/ShuntaroS/estimandYLL, https://shuntaros.github.io/estimandYLL/
 BugReports: https://github.com/ShuntaroS/estimandYLL/issues

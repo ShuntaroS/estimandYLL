@@ -1,10 +1,13 @@
 # Fit the hazard model on everyone, then standardize over the requested group.
 # Selecting the group before fitting would change the fitted hazard model.
+# `keep_fit = TRUE` also returns the fitted model and the person of each
+# person-period row, which the sandwich variance needs.
 yll_estimate_logistic_once <- function(data, id_var, time_var, event_var,
                                       exposure_var, reference_level, exposed_level,
                                       age_at_entry_var, confounders_baseline,
                                       age_start, age_end, age_interval,
-                                      target_population, integration) {
+                                      target_population, integration,
+                                      keep_fit = FALSE) {
   cut_points <- yll_make_cut_points(data, time_var)
   person_periods <- yll_survsplit(data, time_var, event_var, cut_points)
   person_periods$age_temp <- person_periods[[age_at_entry_var]] + person_periods$tstart
@@ -50,7 +53,12 @@ yll_estimate_logistic_once <- function(data, id_var, time_var, event_var,
       .groups = "drop"
     )
   estimates$yll <- estimates$le_m0 - estimates$le_m1
-  yll_format_estimate(estimates, curves)
+  result <- yll_format_estimate(estimates, curves)
+  if (keep_fit) {
+    result$fit <- fit
+    result$person_ids <- person_periods[[id_var]]
+  }
+  result
 }
 
 # Give all model engines the same descriptive output names.

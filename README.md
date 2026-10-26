@@ -14,7 +14,7 @@ with the population being studied.
 
 ## Install
 
-Version 0.1.0 is distributed from GitHub. It has not been submitted to CRAN.
+Version 0.2.0 is distributed from GitHub. It has not been submitted to CRAN.
 
 ```r
 install.packages("remotes")
@@ -60,6 +60,28 @@ saved result included with the package. The full reproduction script is in
 result <- readRDS(system.file("extdata", "yll-example.rds", package = "estimandYLL"))
 ```
 
+### Intervals from a single model fit
+
+`variance = "sandwich"` replaces the bootstrap with the empirical sandwich
+variance of stacked estimating equations
+([Zivich et al., 2025](https://doi.org/10.48550/arXiv.2504.13291)). The model is
+fitted once, so the same analysis returns intervals in a few seconds instead
+of refitting 1,000 models. On this example the sandwich standard errors were
+within 2% of the bootstrap standard errors.
+
+```r
+result_sandwich <- estimate_yll(
+  data = yll_toy,
+  time_var = "period", event_var = "event",
+  exposure_var = "hypertension",
+  reference_level = "No", exposed_level = "Yes",
+  age_at_entry_var = "age", target_population = "unexposed",
+  age_start = 40, age_end = 90, age_interval = 5,
+  confounders_baseline = c("sex", "education_years", "bmi", "smoke_binary"),
+  variance = "sandwich"
+)
+```
+
 `age_end` limits every integral. `age_interval` controls the spacing between
 reported starting ages; the main estimator still integrates on a one-year grid.
 
@@ -71,11 +93,13 @@ reported starting ages; the main estimator still integrates on a one-year grid.
 | `target_population = "exposed"` | Average over those observed exposed (ATT). |
 | `target_population = "unexposed"` | Average over those observed unexposed (ATU). |
 | `reference_level`, `exposed_level` | Observed values corresponding to x = 0 and x = 1. |
-| `ci_method = "normal"` | Bootstrap standard error with a normal approximation (default). |
-| `ci_method = "percentile"` | Quantiles of the same participant bootstrap distribution. |
+| `variance = "bootstrap"` | Participant bootstrap with `B` replicates (default). |
+| `variance = "sandwich"` | Empirical sandwich variance from a single model fit. |
+| `ci_method = "normal"` | Standard error with a normal approximation (default). |
+| `ci_method = "percentile"` | Quantiles of the bootstrap distribution; bootstrap only. |
 
-The target population is required. Both interval methods resample people with
-replacement. Neither changes the fitted mortality model. Intervals are pointwise.
+The target population is required. Neither variance method changes the fitted
+mortality model. Intervals are pointwise.
 
 ## Results and plots
 
@@ -133,9 +157,11 @@ the package to an observational study.
 
 ## Development and validation
 
-See [NEWS](https://shuntaros.github.io/estimandYLL/news/index.html) for the breaking changes in 0.1.0 and
-[the validation record](https://github.com/ShuntaroS/estimandYLL/blob/main/notes/validation/README.md) for the 100-replicate comparison
-with the previous development version. Source scripts are provided there.
+See [NEWS](https://shuntaros.github.io/estimandYLL/news/index.html) for the changes in each version.
+[The validation record](https://github.com/ShuntaroS/estimandYLL/blob/main/notes/validation/README.md) gives the 100-replicate comparison
+with the previous development version, and
+[the sandwich validation](https://github.com/ShuntaroS/estimandYLL/blob/main/notes/sandwich-validation/README.md)
+compares the sandwich variance with the bootstrap. Source scripts are provided there.
 
 ## License
 

@@ -4,19 +4,23 @@ yll_estimate <- function(data, model, id_var, time_var, event_var, exposure_var,
                          target_population, age_start, age_end, age_interval,
                          confounders_baseline, B, seed, conf_level, ci_method,
                          integration, show_progress, use_future,
-                         prediction_interval = 1, rp_df = 4, rp_model = "combined") {
+                         prediction_interval = 1, rp_df = 4, rp_model = "combined",
+                         variance = "bootstrap") {
   data <- yll_check_inputs(
     data, id_var, time_var, event_var, exposure_var, age_at_entry_var,
     confounders_baseline, age_start, age_end, age_interval, B, seed, conf_level,
     show_progress, use_future, model, prediction_interval, rp_df
   )
+  if (variance == "sandwich" && ci_method != "normal") {
+    stop("Sandwich intervals use the normal approximation; set ci_method = \"normal\".", call. = FALSE)
+  }
   levels <- yll_exposure_levels(data[[exposure_var]], reference_level, exposed_level)
   reference_level <- levels$reference
   exposed_level <- levels$exposed
   # Restoring the caller's RNG state also covers errors during fitting.
   withr::local_seed(seed)
 
-  estimate_once <- function(sample_data) {
+  estimate_once <- function(sample_data, keep_fit = FALSE) {
     arguments <- list(
       data = sample_data, id_var = id_var, time_var = time_var, event_var = event_var,
       exposure_var = exposure_var, reference_level = reference_level,
@@ -27,6 +31,7 @@ yll_estimate <- function(data, model, id_var, time_var, event_var, exposure_var,
     )
     if (model == "pooled_logistic") {
       arguments$target_population <- target_population
+      arguments$keep_fit <- keep_fit
       return(do.call(yll_estimate_logistic_once, arguments))
     }
     arguments$prediction_interval <- prediction_interval
@@ -36,8 +41,24 @@ yll_estimate <- function(data, model, id_var, time_var, event_var, exposure_var,
     do.call(yll_estimate_royston_parmar_once, arguments)
   }
 
-  point <- estimate_once(data)
-  replicates <- yll_run_bootstrap(B, estimate_once, data, id_var, use_future, show_progress)
+  if (variance == "sandwich") {
+    # The variance reuses the single fit, so no replicates are drawn.
+    point <- estimate_once(data, keep_fit = TRUE)
+    point$sandwich <- yll_sandwich_logistic(
+      point$fit, point$person_ids, data, id_var = id_var, exposure_var = exposure_var,
+      reference_level = reference_level, exposed_level = exposed_level,
+      confounders_baseline = confounders_baseline, target_population = target_population,
+      age_start = age_start, age_end = age_end, age_interval = age_interval,
+      integration = integration
+    )
+    point$fit <- NULL
+    point$person_ids <- NULL
+    B <- 0L
+    replicates <- list()
+  } else {
+    point <- estimate_once(data)
+    replicates <- yll_run_bootstrap(B, estimate_once, data, id_var, use_future, show_progress)
+  }
   target_size <- switch(target_population,
     all = nrow(data),
     exposed = sum(data[[exposure_var]] == exposed_level),
@@ -52,6 +73,7 @@ yll_estimate <- function(data, model, id_var, time_var, event_var, exposure_var,
     n = nrow(data), n_target = target_size,
     age_start = age_start, age_end = age_end, age_interval = age_interval,
     prediction_interval = prediction_interval, integration = integration,
+    variance = variance,
     B = B, seed = seed, conf_level = conf_level, ci_method = ci_method,
     use_future = use_future
   )

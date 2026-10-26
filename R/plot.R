@@ -38,8 +38,8 @@ plot_yll <- function(result, conf_band = TRUE) {
 #' @param reference_label,exposed_label Optional legend labels. By default,
 #'   the exposure values recorded in the result are displayed.
 #' @return An editable ggplot object. Confidence bands are pointwise bootstrap
-#'   intervals using the result's confidence level and interval method, clipped
-#'   to zero and one. They are not simultaneous bands.
+#'   or sandwich intervals using the result's confidence level and interval
+#'   method, clipped to zero and one. They are not simultaneous bands.
 #' @export
 plot_survival <- function(result, age_start, conf_band = TRUE,
                            reference_label = NULL, exposed_label = NULL) {
@@ -62,7 +62,11 @@ plot_survival <- function(result, age_start, conf_band = TRUE,
       age = curves$age, survival = curves[[column]],
       scenario = labels[scenario], ci_low = NA_real_, ci_high = NA_real_
     )
-    if (conf_band && nrow(bootstrap)) {
+    if (conf_band && identical(result$meta$variance, "sandwich")) {
+      margin <- stats::qnorm(1 - alpha) * curves[[paste0(column, "_se")]]
+      scenario_data$ci_low <- pmax(0, scenario_data$survival - margin)
+      scenario_data$ci_high <- pmin(1, scenario_data$survival + margin)
+    } else if (conf_band && nrow(bootstrap)) {
       for (row in seq_len(nrow(scenario_data))) {
         values <- bootstrap[[column]][bootstrap$age == scenario_data$age[row]]
         if (length(values) < 2L) next

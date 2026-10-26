@@ -17,8 +17,8 @@ test_that("comparator results have the same meaning and shape", {
 
 test_that("plots are editable ggplot objects with optional confidence intervals", {
   skip_if_not_installed("ggplot2")
-  for (B in c(0, 3)) {
-    result <- estimate_toy(B = B)
+  results <- list(estimate_toy(B = 0), estimate_toy(B = 3), estimate_toy_sandwich())
+  for (result in results) {
     expect_s3_class(plot_yll(result), "ggplot")
     expect_s3_class(plot_survival(result, age_start = 50), "ggplot")
     expect_s3_class(plot_yll(result) + ggplot2::labs(title = "Edited"), "ggplot")

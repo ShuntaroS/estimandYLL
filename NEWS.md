@@ -1,4 +1,24 @@
+# estimandYLL 0.2.0
+
+* Add `variance = "sandwich"` to `estimate_yll()`. The model is fitted once,
+  and intervals use the empirical sandwich variance of the pooled logistic
+  score stacked with the standardization estimating equations (Zivich et al.,
+  2025, arXiv:2504.13291). It accounts for both the hazard model and the target
+  population's covariate distribution. Spline knots are treated as fixed.
+* On `yll_toy`, sandwich standard errors were 0.97 to 1.02 times those of a
+  1,000-replicate bootstrap and of the spread over 500 simulated datasets. One
+  call took 1 to 3 seconds; see `notes/sandwich-validation`.
+* With `variance = "sandwich"`, `survival_curves` gains `survival_reference_se`
+  and `survival_exposed_se`, and `plot_survival()` draws bands from them. Only
+  normal-approximation intervals are available.
+* The variance is accumulated over groups of people, so memory use for
+  predictions does not grow with the size of the target population.
+* The default remains `variance = "bootstrap"`, so 0.1.0 results are reproduced
+  unchanged. `meta$variance` records the method for every estimator.
+
 # estimandYLL 0.1.0
+
+* Archived on Zenodo as doi:10.5281/zenodo.23653506.
 
 * Replace the development API with `estimate_yll()`, two explicitly named
   comparator functions, and `plot_yll()` / `plot_survival()`.

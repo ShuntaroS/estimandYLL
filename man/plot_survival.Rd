@@ -24,8 +24,8 @@ the exposure values recorded in the result are displayed.}
 }
 \value{
 An editable ggplot object. Confidence bands are pointwise bootstrap
-intervals using the result's confidence level and interval method, clipped
-to zero and one. They are not simultaneous bands.
+or sandwich intervals using the result's confidence level and interval
+method, clipped to zero and one. They are not simultaneous bands.
 }
 \description{
 Each curve is the mean of individual survival curves restarted at one at

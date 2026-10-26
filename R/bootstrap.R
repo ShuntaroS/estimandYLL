@@ -113,9 +113,23 @@ yll_build_result <- function(point, replicates, meta) {
   if (meta$B > 0L && sum(succeeded) < 2L) {
     warning("Fewer than two bootstrap replicates succeeded; confidence intervals are NA.", call. = FALSE)
   }
+  if (identical(meta$variance, "sandwich")) {
+    summary <- yll_sandwich_intervals(point$estimates, point$sandwich, meta$conf_level)
+    sandwich_estimates <- point$sandwich$estimates
+    difference <- abs(sandwich_estimates$yll - point$estimates$yll[
+      match(sandwich_estimates$starting_age, point$estimates$starting_age)
+    ])
+    if (any(!is.finite(difference)) || any(difference > 1e-6)) {
+      warning("Sandwich and main point estimates disagree; the sandwich intervals are unreliable.",
+              call. = FALSE)
+    }
+    point$curves <- left_join(point$curves, point$sandwich$curves, by = c("starting_age", "age"))
+  } else {
+    summary <- yll_confidence_intervals(point$estimates, bootstrap_estimates,
+                                        meta$conf_level, meta$ci_method)
+  }
   list(
-    summary = yll_confidence_intervals(point$estimates, bootstrap_estimates,
-                                       meta$conf_level, meta$ci_method),
+    summary = summary,
     bootstrap_estimates = bootstrap_estimates,
     survival_curves = point$curves,
     bootstrap_survival_curves = bootstrap_curves,

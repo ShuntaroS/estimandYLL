@@ -24,7 +24,8 @@ estimate_yll(
   ci_method = c("normal", "percentile"),
   integration = c("left_rectangle", "trapezoidal"),
   show_progress = TRUE,
-  use_future = TRUE
+  use_future = TRUE,
+  variance = c("bootstrap", "sandwich")
 )
 }
 \arguments{
@@ -69,8 +70,9 @@ and recorded in the result metadata; intervals use successful replicates.}
 
 \item{conf_level}{Confidence level, strictly between zero and one.}
 
-\item{ci_method}{\code{"normal"} (default) uses the bootstrap standard error;
-\code{"percentile"} uses bootstrap quantiles. Both resample people with replacement.}
+\item{ci_method}{\code{"normal"} (default) uses the estimated standard error;
+\code{"percentile"} uses bootstrap quantiles and is available only with
+\code{variance = "bootstrap"}.}
 
 \item{integration}{\code{"left_rectangle"} (default) or \code{"trapezoidal"}.}
 
@@ -79,6 +81,11 @@ uses the caller's progressr handlers.}
 
 \item{use_future}{Use the caller's future plan for bootstrapping. The
 package never changes the plan or starts a worker pool itself.}
+
+\item{variance}{\code{"bootstrap"} (default) resamples participants \code{B} times.
+\code{"sandwich"} fits the model once and uses the empirical sandwich variance
+of the stacked estimating equations; it ignores \code{B}, \code{seed},
+\code{show_progress}, and \code{use_future}, and requires \code{ci_method = "normal"}.}
 }
 \value{
 A list with five elements:
@@ -87,16 +94,20 @@ A list with five elements:
 \code{yll}, \code{yll_se}, \code{ci_low}, and \code{ci_high}, all measured in years.
 \item \code{bootstrap_estimates}: the four point-estimate columns plus \code{iteration}.
 \item \code{survival_curves}: \code{starting_age}, \code{age}, \code{survival_reference}, and
-\code{survival_exposed}, averaged over the target population.
+\code{survival_exposed}, averaged over the target population. With
+\code{variance = "sandwich"}, \code{survival_reference_se} and \code{survival_exposed_se}
+are added.
 \item \code{bootstrap_survival_curves}: the same curve columns plus \code{iteration}.
-\item \code{meta}: model, target population, exposure labels, age window, interval
-method, bootstrap settings, successful replicate count, and failure details.
+\item \code{meta}: model, target population, exposure labels, age window, variance
+and interval methods, bootstrap settings, successful replicate count, and
+failure details.
 \code{bootstrap_unreliable} records finite bootstrap ERLs outside the possible
 age window. These trigger a warning and are retained, not silently removed.
 }
 
-With \code{B = 0}, intervals and standard errors are \code{NA} and bootstrap tables
-are empty. Curves are standardized after conditioning each person on
+With \code{B = 0} and the bootstrap, intervals and standard errors are \code{NA} and
+bootstrap tables are empty. With \code{variance = "sandwich"}, the bootstrap
+tables are always empty. Curves are standardized after conditioning each person on
 survival to the starting age. They are not curves obtained by first
 averaging unconditional survival and then conditioning that average.
 Intervals are pointwise, not simultaneous confidence bands.
@@ -107,7 +118,8 @@ survival under both exposure levels, and average individual conditional
 survival curves over the specified baseline population. The contrast is
 always restricted expected residual lifetime (ERL) under the reference
 level minus ERL under the exposed level. Its sign never depends on the
-target population.
+target population. Confidence intervals come from a participant bootstrap
+or from the empirical sandwich variance.
 }
 \details{
 The fitted model includes exposure, a natural cubic spline in
@@ -118,6 +130,14 @@ the starting age. Causal interpretation requires consistency, exchangeability,
 positivity, appropriate censoring and entry assumptions, and correct model
 specification. Predictions beyond observed age support require extrapolation.
 The same baseline covariate distribution is retained at every starting age.
+
+The sandwich variance stacks the pooled logistic score, summed within
+person, with the estimating equations for the standardized survival
+probabilities, following Zivich et al. (2025). It accounts for both the
+fitted hazard model and the baseline covariate distribution of the target
+population. Spline knots are treated as fixed, whereas each bootstrap
+replicate selects them again. Predictions are processed in groups of people,
+so their memory use does not grow with the size of the target population.
 }
 \examples{
 data(yll_toy)
@@ -129,4 +149,19 @@ result <- estimate_yll(
   confounders_baseline = "sex", B = 0, use_future = FALSE
 )
 result$summary
+
+# Sandwich confidence intervals from a single model fit
+sandwich <- estimate_yll(
+  yll_toy[1:500, ], time_var = "period", event_var = "event",
+  exposure_var = "hypertension", reference_level = "No", exposed_level = "Yes",
+  age_at_entry_var = "age", target_population = "unexposed",
+  age_start = 50, age_end = 70, age_interval = 10,
+  confounders_baseline = "sex", variance = "sandwich"
+)
+sandwich$summary
+}
+\references{
+Zivich PN, Cole SR, Shook-Sa BE, DeMonte JB, Edwards JK (2025). Estimating
+equations for causal survival analysis with pooled logistic regression.
+arXiv:2504.13291. \doi{10.48550/arXiv.2504.13291}
 }

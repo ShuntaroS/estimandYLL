@@ -2,15 +2,17 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it using these metadata."
 type: software
 title: "estimandYLL: Years of Life Lost via the G-Formula"
-version: 0.1.0
+version: 0.2.0
 doi: 10.5281/zenodo.23653505
 abstract: >-
   Estimates years of life lost as the difference in restricted expected
   residual lifetime between two binary exposure scenarios on the attained-age
   scale. A pooled logistic parametric g-formula standardizes individual
   conditional survival curves over an explicitly selected baseline population.
-  Includes Poisson and Royston-Parmar model comparators, participant bootstrap
-  confidence intervals, and plotting helpers.
+  Confidence intervals come from a participant bootstrap or from the empirical
+  sandwich variance of stacked estimating equations, which needs a single model
+  fit. Includes Poisson and Royston-Parmar model comparators and plotting
+  helpers.
 authors:
   - family-names: Sato
     given-names: Shuntaro

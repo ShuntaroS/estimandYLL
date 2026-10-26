@@ -10,3 +10,9 @@ estimate_toy <- function(...) {
   arguments <- utils::modifyList(toy_arguments(), list(...), keep.null = TRUE)
   do.call(estimate_yll, arguments)
 }
+
+estimate_toy_sandwich <- function(...) {
+  arguments <- utils::modifyList(toy_arguments(), list(...), keep.null = TRUE)
+  arguments$B <- NULL
+  do.call(estimate_yll, c(arguments, list(variance = "sandwich")))
+}
