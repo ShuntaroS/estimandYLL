@@ -3,6 +3,7 @@ message: "If you use this software, please cite it using these metadata."
 type: software
 title: "estimandYLL: Years of Life Lost via the G-Formula"
 version: 0.1.0
+doi: 10.5281/zenodo.23653505
 abstract: >-
   Estimates years of life lost as the difference in restricted expected
   residual lifetime between two binary exposure scenarios on the attained-age
