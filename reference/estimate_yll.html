@@ -4,12 +4,14 @@ survival under both exposure levels, and average individual conditional
 survival curves over the specified baseline population. The contrast is
 always restricted expected residual lifetime (ERL) under the reference
 level minus ERL under the exposed level. Its sign never depends on the
-target population."><meta property="og:description" content="Fit a pooled logistic hazard model on the full analytic sample, predict
+target population. Confidence intervals come from a participant bootstrap
+or from the empirical sandwich variance."><meta property="og:description" content="Fit a pooled logistic hazard model on the full analytic sample, predict
 survival under both exposure levels, and average individual conditional
 survival curves over the specified baseline population. The contrast is
 always restricted expected residual lifetime (ERL) under the reference
 level minus ERL under the exposed level. Its sign never depends on the
-target population."></head><body>
+target population. Confidence intervals come from a participant bootstrap
+or from the empirical sandwich variance."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -17,7 +19,7 @@ target population."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">estimandYLL</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -57,7 +59,8 @@ survival under both exposure levels, and average individual conditional
 survival curves over the specified baseline population. The contrast is
 always restricted expected residual lifetime (ERL) under the reference
 level minus ERL under the exposed level. Its sign never depends on the
-target population.</p>
+target population. Confidence intervals come from a participant bootstrap
+or from the empirical sandwich variance.</p>
     </div>
 
     <div class="section level2">
@@ -82,7 +85,8 @@ target population.</p>
 <span>  ci_method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"normal"</span>, <span class="st">"percentile"</span><span class="op">)</span>,</span>
 <span>  integration <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"left_rectangle"</span>, <span class="st">"trapezoidal"</span><span class="op">)</span>,</span>
 <span>  show_progress <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  use_future <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  use_future <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  variance <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"bootstrap"</span>, <span class="st">"sandwich"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -162,8 +166,9 @@ and recorded in the result metadata; intervals use successful replicates.</p></d
 
 
 <dt id="arg-ci-method">ci_method<a class="anchor" aria-label="anchor" href="#arg-ci-method"></a></dt>
-<dd><p><code>"normal"</code> (default) uses the bootstrap standard error;
-<code>"percentile"</code> uses bootstrap quantiles. Both resample people with replacement.</p></dd>
+<dd><p><code>"normal"</code> (default) uses the estimated standard error;
+<code>"percentile"</code> uses bootstrap quantiles and is available only with
+<code>variance = "bootstrap"</code>.</p></dd>
 
 
 <dt id="arg-integration">integration<a class="anchor" aria-label="anchor" href="#arg-integration"></a></dt>
@@ -179,6 +184,13 @@ uses the caller's progressr handlers.</p></dd>
 <dd><p>Use the caller's future plan for bootstrapping. The
 package never changes the plan or starts a worker pool itself.</p></dd>
 
+
+<dt id="arg-variance">variance<a class="anchor" aria-label="anchor" href="#arg-variance"></a></dt>
+<dd><p><code>"bootstrap"</code> (default) resamples participants <code>B</code> times.
+<code>"sandwich"</code> fits the model once and uses the empirical sandwich variance
+of the stacked estimating equations; it ignores <code>B</code>, <code>seed</code>,
+<code>show_progress</code>, and <code>use_future</code>, and requires <code>ci_method = "normal"</code>.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -186,14 +198,18 @@ package never changes the plan or starts a worker pool itself.</p></dd>
 <code>yll</code>, <code>yll_se</code>, <code>ci_low</code>, and <code>ci_high</code>, all measured in years.</p></li>
 <li><p><code>bootstrap_estimates</code>: the four point-estimate columns plus <code>iteration</code>.</p></li>
 <li><p><code>survival_curves</code>: <code>starting_age</code>, <code>age</code>, <code>survival_reference</code>, and
-<code>survival_exposed</code>, averaged over the target population.</p></li>
+<code>survival_exposed</code>, averaged over the target population. With
+<code>variance = "sandwich"</code>, <code>survival_reference_se</code> and <code>survival_exposed_se</code>
+are added.</p></li>
 <li><p><code>bootstrap_survival_curves</code>: the same curve columns plus <code>iteration</code>.</p></li>
-<li><p><code>meta</code>: model, target population, exposure labels, age window, interval
-method, bootstrap settings, successful replicate count, and failure details.
+<li><p><code>meta</code>: model, target population, exposure labels, age window, variance
+and interval methods, bootstrap settings, successful replicate count, and
+failure details.
 <code>bootstrap_unreliable</code> records finite bootstrap ERLs outside the possible
 age window. These trigger a warning and are retained, not silently removed.</p></li>
-</ul><p>With <code>B = 0</code>, intervals and standard errors are <code>NA</code> and bootstrap tables
-are empty. Curves are standardized after conditioning each person on
+</ul><p>With <code>B = 0</code> and the bootstrap, intervals and standard errors are <code>NA</code> and
+bootstrap tables are empty. With <code>variance = "sandwich"</code>, the bootstrap
+tables are always empty. Curves are standardized after conditioning each person on
 survival to the starting age. They are not curves obtained by first
 averaging unconditional survival and then conditioning that average.
 Intervals are pointwise, not simultaneous confidence bands.</p>
@@ -208,6 +224,19 @@ the starting age. Causal interpretation requires consistency, exchangeability,
 positivity, appropriate censoring and entry assumptions, and correct model
 specification. Predictions beyond observed age support require extrapolation.
 The same baseline covariate distribution is retained at every starting age.</p>
+<p>The sandwich variance stacks the pooled logistic score, summed within
+person, with the estimating equations for the standardized survival
+probabilities, following Zivich et al. (2025). It accounts for both the
+fitted hazard model and the baseline covariate distribution of the target
+population. Spline knots are treated as fixed, whereas each bootstrap
+replicate selects them again. Predictions are processed in groups of people,
+so their memory use does not grow with the size of the target population.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
+    <p>Zivich PN, Cole SR, Shook-Sa BE, DeMonte JB, Edwards JK (2025). Estimating
+equations for causal survival analysis with pooled logistic regression.
+arXiv:2504.13291. <a href="https://doi.org/10.48550/arXiv.2504.13291" class="external-link">doi:10.48550/arXiv.2504.13291</a></p>
     </div>
 
     <div class="section level2">
@@ -227,6 +256,22 @@ The same baseline covariate distribution is retained at every starting age.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>           50         18.7        18.3  0.393     <span style="color: #BB0000;">NA</span>     <span style="color: #BB0000;">NA</span>      <span style="color: #BB0000;">NA</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>           60          9.45        8.95 0.505     <span style="color: #BB0000;">NA</span>     <span style="color: #BB0000;">NA</span>      <span style="color: #BB0000;">NA</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>           70          0           0    0         <span style="color: #BB0000;">NA</span>     <span style="color: #BB0000;">NA</span>      <span style="color: #BB0000;">NA</span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Sandwich confidence intervals from a single model fit</span></span></span>
+<span class="r-in"><span><span class="va">sandwich</span> <span class="op">&lt;-</span> <span class="fu">estimate_yll</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">yll_toy</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">500</span>, <span class="op">]</span>, time_var <span class="op">=</span> <span class="st">"period"</span>, event_var <span class="op">=</span> <span class="st">"event"</span>,</span></span>
+<span class="r-in"><span>  exposure_var <span class="op">=</span> <span class="st">"hypertension"</span>, reference_level <span class="op">=</span> <span class="st">"No"</span>, exposed_level <span class="op">=</span> <span class="st">"Yes"</span>,</span></span>
+<span class="r-in"><span>  age_at_entry_var <span class="op">=</span> <span class="st">"age"</span>, target_population <span class="op">=</span> <span class="st">"unexposed"</span>,</span></span>
+<span class="r-in"><span>  age_start <span class="op">=</span> <span class="fl">50</span>, age_end <span class="op">=</span> <span class="fl">70</span>, age_interval <span class="op">=</span> <span class="fl">10</span>,</span></span>
+<span class="r-in"><span>  confounders_baseline <span class="op">=</span> <span class="st">"sex"</span>, variance <span class="op">=</span> <span class="st">"sandwich"</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">sandwich</span><span class="op">$</span><span class="va">summary</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 3 × 7</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   starting_age erl_reference erl_exposed   yll yll_se ci_low ci_high</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>           50         18.7        18.3  0.393  0.419 -<span style="color: #BB0000;">0.429</span>   1.21 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>           60          9.45        8.95 0.505  0.207  0.101   0.910</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>           70          0           0    0      0      0       0    </span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

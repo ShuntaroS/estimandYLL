@@ -11,8 +11,8 @@
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Years of Life Lost via the G-Formula">
-<meta name="description" content="Estimates years of life lost as the difference in restricted expected residual lifetime between two binary exposure scenarios on the attained-age scale. A pooled logistic parametric g-formula standardizes individual conditional survival curves over an explicitly selected baseline population. Includes Poisson and Royston-Parmar model comparators, participant bootstrap confidence intervals, and plotting helpers.">
-<meta property="og:description" content="Estimates years of life lost as the difference in restricted expected residual lifetime between two binary exposure scenarios on the attained-age scale. A pooled logistic parametric g-formula standardizes individual conditional survival curves over an explicitly selected baseline population. Includes Poisson and Royston-Parmar model comparators, participant bootstrap confidence intervals, and plotting helpers.">
+<meta name="description" content="Estimates years of life lost as the difference in restricted expected residual lifetime between two binary exposure scenarios on the attained-age scale. A pooled logistic parametric g-formula standardizes individual conditional survival curves over an explicitly selected baseline population. Confidence intervals come from a participant bootstrap or from the empirical sandwich variance of stacked estimating equations, which needs a single model fit. Includes Poisson and Royston-Parmar model comparators and plotting helpers.">
+<meta property="og:description" content="Estimates years of life lost as the difference in restricted expected residual lifetime between two binary exposure scenarios on the attained-age scale. A pooled logistic parametric g-formula standardizes individual conditional survival curves over an explicitly selected baseline population. Confidence intervals come from a participant bootstrap or from the empirical sandwich variance of stacked estimating equations, which needs a single model fit. Includes Poisson and Royston-Parmar model comparators and plotting helpers.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">estimandYLL</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -65,7 +65,7 @@
 <div class="section level2">
 <h2 id="install">Install<a class="anchor" aria-label="anchor" href="#install"></a>
 </h2>
-<p>Version 0.1.0 is distributed from GitHub. It has not been submitted to CRAN.</p>
+<p>Version 0.2.0 is distributed from GitHub. It has not been submitted to CRAN.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"remotes"</span><span class="op">)</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"ShuntaroS/estimandYLL"</span><span class="op">)</span></span></code></pre></div>
@@ -94,7 +94,23 @@
 <p>To inspect the published figures without rerunning the bootstrap, load the saved result included with the package. The full reproduction script is in <a href="https://github.com/ShuntaroS/estimandYLL/tree/main/notes/published-example" class="external-link">notes/published-example</a>.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"yll-example.rds"</span>, package <span class="op">=</span> <span class="st">"estimandYLL"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="intervals-from-a-single-model-fit">Intervals from a single model fit<a class="anchor" aria-label="anchor" href="#intervals-from-a-single-model-fit"></a>
+</h3>
+<p><code>variance = "sandwich"</code> replaces the bootstrap with the empirical sandwich variance of stacked estimating equations (<a href="https://doi.org/10.48550/arXiv.2504.13291" class="external-link">Zivich et al., 2025</a>). The model is fitted once, so the same analysis returns intervals in a few seconds instead of refitting 1,000 models. On this example the sandwich standard errors were within 2% of the bootstrap standard errors.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">result_sandwich</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/estimate_yll.html">estimate_yll</a></span><span class="op">(</span></span>
+<span>  data <span class="op">=</span> <span class="va">yll_toy</span>,</span>
+<span>  time_var <span class="op">=</span> <span class="st">"period"</span>, event_var <span class="op">=</span> <span class="st">"event"</span>,</span>
+<span>  exposure_var <span class="op">=</span> <span class="st">"hypertension"</span>,</span>
+<span>  reference_level <span class="op">=</span> <span class="st">"No"</span>, exposed_level <span class="op">=</span> <span class="st">"Yes"</span>,</span>
+<span>  age_at_entry_var <span class="op">=</span> <span class="st">"age"</span>, target_population <span class="op">=</span> <span class="st">"unexposed"</span>,</span>
+<span>  age_start <span class="op">=</span> <span class="fl">40</span>, age_end <span class="op">=</span> <span class="fl">90</span>, age_interval <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>  confounders_baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"education_years"</span>, <span class="st">"bmi"</span>, <span class="st">"smoke_binary"</span><span class="op">)</span>,</span>
+<span>  variance <span class="op">=</span> <span class="st">"sandwich"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 <p><code>age_end</code> limits every integral. <code>age_interval</code> controls the spacing between reported starting ages; the main estimator still integrates on a one-year grid.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="what-to-specify">What to specify<a class="anchor" aria-label="anchor" href="#what-to-specify"></a>
@@ -128,22 +144,30 @@
 <td>Observed values corresponding to x = 0 and x = 1.</td>
 </tr>
 <tr>
+<td><code>variance = "bootstrap"</code></td>
+<td>Participant bootstrap with <code>B</code> replicates (default).</td>
+</tr>
+<tr>
+<td><code>variance = "sandwich"</code></td>
+<td>Empirical sandwich variance from a single model fit.</td>
+</tr>
+<tr>
 <td><code>ci_method = "normal"</code></td>
-<td>Bootstrap standard error with a normal approximation (default).</td>
+<td>Standard error with a normal approximation (default).</td>
 </tr>
 <tr>
 <td><code>ci_method = "percentile"</code></td>
-<td>Quantiles of the same participant bootstrap distribution.</td>
+<td>Quantiles of the bootstrap distribution; bootstrap only.</td>
 </tr>
 </tbody>
 </table>
-<p>The target population is required. Both interval methods resample people with replacement. Neither changes the fitted mortality model. Intervals are pointwise.</p>
+<p>The target population is required. Neither variance method changes the fitted mortality model. Intervals are pointwise.</p>
 </div>
 <div class="section level2">
 <h2 id="results-and-plots">Results and plots<a class="anchor" aria-label="anchor" href="#results-and-plots"></a>
 </h2>
 <p><code>result$summary</code> contains <code>starting_age</code>, <code>erl_reference</code>, <code>erl_exposed</code>, <code>yll</code>, <code>yll_se</code>, <code>ci_low</code> and <code>ci_high</code>. Lifetimes, their difference and uncertainty are measured in years. The remaining elements are <code>bootstrap_estimates</code>, <code>survival_curves</code>, <code>bootstrap_survival_curves</code>, and <code>meta</code>.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/plot_yll.html">plot_yll</a></span><span class="op">(</span><span class="va">result</span>, conf_band <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"YLL among participants without hypertension"</span><span class="op">)</span></span>
@@ -180,7 +204,7 @@
 <div class="section level2">
 <h2 id="development-and-validation">Development and validation<a class="anchor" aria-label="anchor" href="#development-and-validation"></a>
 </h2>
-<p>See <a href="https://shuntaros.github.io/estimandYLL/news/index.html">NEWS</a> for the breaking changes in 0.1.0 and <a href="https://github.com/ShuntaroS/estimandYLL/blob/main/notes/validation/README.md" class="external-link">the validation record</a> for the 100-replicate comparison with the previous development version. Source scripts are provided there.</p>
+<p>See <a href="https://shuntaros.github.io/estimandYLL/news/index.html">NEWS</a> for the changes in each version. <a href="https://github.com/ShuntaroS/estimandYLL/blob/main/notes/validation/README.md" class="external-link">The validation record</a> gives the 100-replicate comparison with the previous development version, and <a href="https://github.com/ShuntaroS/estimandYLL/blob/main/notes/sandwich-validation/README.md" class="external-link">the sandwich validation</a> compares the sandwich variance with the bootstrap. Source scripts are provided there.</p>
 </div>
 <div class="section level2">
 <h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>

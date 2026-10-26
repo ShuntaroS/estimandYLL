@@ -72,12 +72,13 @@ calculation uses annual hazards. All lifetimes and YLL are zero at age
 
 ## Request confidence intervals
 
-Both options use a nonparametric participant bootstrap. Each replicate
-refits the model, including spline knot selection, and repeats
-prediction and standardization. The default normal interval is the point
-estimate plus or minus a normal quantile times the bootstrap standard
-error. The percentile interval takes quantiles of the replicate
-estimates.
+[`estimate_yll()`](https://shuntaros.github.io/estimandYLL/reference/estimate_yll.md)
+offers two variance methods. The default, `variance = "bootstrap"`, uses
+a nonparametric participant bootstrap. Each replicate refits the model,
+including spline knot selection, and repeats prediction and
+standardization. The default normal interval is the point estimate plus
+or minus a normal quantile times the bootstrap standard error. The
+percentile interval takes quantiles of the replicate estimates.
 
 The published example uses `ci_method = "normal"` and
 `conf_level = 0.95`. To request percentile intervals, set
@@ -89,6 +90,73 @@ replicates produce a warning and are recorded with iteration numbers and
 reasons in `result$meta$bootstrap_failures`. Intervals use the
 successful replicates; many failures undermine their interpretation. Do
 not treat a computed interval as evidence that the model was stable.
+
+### Sandwich variance from a single fit
+
+`variance = "sandwich"` fits the model once. The pooled logistic score,
+summed within each person, is stacked with the estimating equations for
+the standardized survival curves, and the empirical sandwich variance
+gives the standard errors ([Zivich et al.,
+2025](https://doi.org/10.48550/arXiv.2504.13291)). These standard errors
+account for both the fitted hazard model and the covariate distribution
+of the target population. Spline knots are treated as fixed. Only normal
+intervals are available, and `B`, `seed`, and `use_future` are not used.
+
+``` r
+
+data(yll_toy)
+sandwich <- estimate_yll(
+  data = yll_toy,
+  time_var = "period", event_var = "event",
+  exposure_var = "hypertension",
+  reference_level = "No", exposed_level = "Yes",
+  age_at_entry_var = "age", target_population = "unexposed",
+  age_start = 40, age_end = 90, age_interval = 5,
+  confounders_baseline = c("sex", "education_years", "bmi", "smoke_binary"),
+  variance = "sandwich"
+)
+knitr::kable(data.frame(
+  starting_age = sandwich$summary$starting_age,
+  yll = sandwich$summary$yll,
+  se_sandwich = sandwich$summary$yll_se,
+  se_bootstrap = result$summary$yll_se
+), digits = 3)
+```
+
+| starting_age |   yll | se_sandwich | se_bootstrap |
+|-------------:|------:|------------:|-------------:|
+|           40 | 5.661 |       0.838 |        0.853 |
+|           45 | 5.423 |       0.668 |        0.678 |
+|           50 | 5.247 |       0.621 |        0.619 |
+|           55 | 5.101 |       0.608 |        0.599 |
+|           60 | 4.836 |       0.602 |        0.593 |
+|           65 | 4.392 |       0.602 |        0.597 |
+|           70 | 4.009 |       0.650 |        0.649 |
+|           75 | 3.539 |       0.695 |        0.699 |
+|           80 | 2.692 |       0.627 |        0.633 |
+|           85 | 1.239 |       0.334 |        0.338 |
+|           90 | 0.000 |       0.000 |        0.000 |
+
+The point estimates equal those of the saved bootstrap result, and the
+standard errors are within 2% of the 1,000-replicate bootstrap. The
+calculation takes a few seconds instead of 1,000 model fits. The
+[sandwich
+validation](https://github.com/ShuntaroS/estimandYLL/blob/main/notes/sandwich-validation/README.md)
+compares the two methods in more settings. With the sandwich variance,
+`survival_curves` also contains `survival_reference_se` and
+`survival_exposed_se`, and
+[`plot_survival()`](https://shuntaros.github.io/estimandYLL/reference/plot_survival.md)
+uses them for its bands.
+
+``` r
+
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  print(plot_survival(sandwich, age_start = 50) +
+          ggplot2::labs(title = "Survival from age 50 with sandwich intervals"))
+}
+```
+
+![](getting-started_files/figure-html/sandwich-plot-1.png)
 
 ## Inspect and customize plots
 
@@ -121,7 +189,10 @@ simultaneous confidence bands across ages.
 an `iteration` column to replicate estimates. `survival_curves` contains
 `starting_age`, `age`, `survival_reference`, and `survival_exposed`;
 `bootstrap_survival_curves` adds `iteration`. `meta` records settings,
-population sizes, successful replicate count, and failures.
+including the variance method, population sizes, successful replicate
+count, and failures. With `variance = "sandwich"`, the two bootstrap
+tables are empty and `survival_curves` has the two standard-error
+columns.
 
 ## Optional parallel bootstrap
 

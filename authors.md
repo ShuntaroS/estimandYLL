@@ -12,13 +12,13 @@ Source:
 
 Sato S (2026). *estimandYLL: Years of Life Lost via the G-Formula*.
 [doi:10.5281/zenodo.23653505](https://doi.org/10.5281/zenodo.23653505).
-R package version 0.1.0, <https://github.com/ShuntaroS/estimandYLL>.
+R package version 0.2.0, <https://github.com/ShuntaroS/estimandYLL>.
 
     @Manual{,
       title = {{estimandYLL}: Years of Life Lost via the G-Formula},
       author = {Shuntaro Sato},
       year = {2026},
-      note = {R package version 0.1.0},
+      note = {R package version 0.2.0},
       doi = {10.5281/zenodo.23653505},
       url = {https://github.com/ShuntaroS/estimandYLL},
     }

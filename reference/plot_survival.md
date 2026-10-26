@@ -36,6 +36,6 @@ plot_survival(
 
 ## Value
 
-An editable ggplot object. Confidence bands are pointwise bootstrap
-intervals using the result's confidence level and interval method,
-clipped to zero and one. They are not simultaneous bands.
+An editable ggplot object. Confidence bands are pointwise bootstrap or
+sandwich intervals using the result's confidence level and interval
+method, clipped to zero and one. They are not simultaneous bands.

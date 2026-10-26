@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">estimandYLL</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -265,12 +265,126 @@
 <p><img src="getting-started-ja_files/figure-html/plots-ja-1.png" class="r-plt" alt="" width="576"><img src="getting-started-ja_files/figure-html/plots-ja-2.png" class="r-plt" alt="" width="576"></p>
 <p>YLL の図は、5歳刻みの点推定と95%信頼区間をエラーバーで表示します。
 生存曲線の図は、同じ1,000反復から求めた95%信頼区間を帯で表示します。</p>
+<div class="section level3">
+<h3 id="回の当てはめで求めるサンドイッチ分散">1回の当てはめで求めるサンドイッチ分散<a class="anchor" aria-label="anchor" href="#%E5%9B%9E%E3%81%AE%E5%BD%93%E3%81%A6%E3%81%AF%E3%82%81%E3%81%A7%E6%B1%82%E3%82%81%E3%82%8B%E3%82%B5%E3%83%B3%E3%83%89%E3%82%A4%E3%83%83%E3%83%81%E5%88%86%E6%95%A3"></a>
+</h3>
+<p><code>variance = "sandwich"</code>
+と指定すると、モデルを1回だけ当てはめて信頼区間を求めます。
+人ごとに合算した pooled logistic
+のスコアと、標準化した生存曲線の推定方程式を積み重ね、
+経験サンドイッチ分散で標準誤差を求めます （<a href="https://doi.org/10.48550/arXiv.2504.13291" class="external-link">Zivich et al.,
+2025</a>）。
+この標準誤差にはハザードモデルの推定と、対象集団の共変量分布の両方によるばらつきが入ります。
+スプラインのノットは固定として扱います。
+区間は正規近似だけで、<code>B</code>、<code>seed</code>、<code>use_future</code>
+は使いません。</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">yll_toy</span><span class="op">)</span></span>
+<span><span class="va">sandwich</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimate_yll.html">estimate_yll</a></span><span class="op">(</span></span>
+<span>  data <span class="op">=</span> <span class="va">yll_toy</span>,</span>
+<span>  time_var <span class="op">=</span> <span class="st">"period"</span>, event_var <span class="op">=</span> <span class="st">"event"</span>,</span>
+<span>  exposure_var <span class="op">=</span> <span class="st">"hypertension"</span>,</span>
+<span>  reference_level <span class="op">=</span> <span class="st">"No"</span>, exposed_level <span class="op">=</span> <span class="st">"Yes"</span>,</span>
+<span>  age_at_entry_var <span class="op">=</span> <span class="st">"age"</span>, target_population <span class="op">=</span> <span class="st">"unexposed"</span>,</span>
+<span>  age_start <span class="op">=</span> <span class="fl">40</span>, age_end <span class="op">=</span> <span class="fl">90</span>, age_interval <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>  confounders_baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"education_years"</span>, <span class="st">"bmi"</span>, <span class="st">"smoke_binary"</span><span class="op">)</span>,</span>
+<span>  variance <span class="op">=</span> <span class="st">"sandwich"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  starting_age <span class="op">=</span> <span class="va">sandwich</span><span class="op">$</span><span class="va">summary</span><span class="op">$</span><span class="va">starting_age</span>,</span>
+<span>  yll <span class="op">=</span> <span class="va">sandwich</span><span class="op">$</span><span class="va">summary</span><span class="op">$</span><span class="va">yll</span>,</span>
+<span>  se_sandwich <span class="op">=</span> <span class="va">sandwich</span><span class="op">$</span><span class="va">summary</span><span class="op">$</span><span class="va">yll_se</span>,</span>
+<span>  se_bootstrap <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">summary</span><span class="op">$</span><span class="va">yll_se</span></span>
+<span><span class="op">)</span>, digits <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th align="right">starting_age</th>
+<th align="right">yll</th>
+<th align="right">se_sandwich</th>
+<th align="right">se_bootstrap</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="right">40</td>
+<td align="right">5.661</td>
+<td align="right">0.838</td>
+<td align="right">0.853</td>
+</tr>
+<tr class="even">
+<td align="right">45</td>
+<td align="right">5.423</td>
+<td align="right">0.668</td>
+<td align="right">0.678</td>
+</tr>
+<tr class="odd">
+<td align="right">50</td>
+<td align="right">5.247</td>
+<td align="right">0.621</td>
+<td align="right">0.619</td>
+</tr>
+<tr class="even">
+<td align="right">55</td>
+<td align="right">5.101</td>
+<td align="right">0.608</td>
+<td align="right">0.599</td>
+</tr>
+<tr class="odd">
+<td align="right">60</td>
+<td align="right">4.836</td>
+<td align="right">0.602</td>
+<td align="right">0.593</td>
+</tr>
+<tr class="even">
+<td align="right">65</td>
+<td align="right">4.392</td>
+<td align="right">0.602</td>
+<td align="right">0.597</td>
+</tr>
+<tr class="odd">
+<td align="right">70</td>
+<td align="right">4.009</td>
+<td align="right">0.650</td>
+<td align="right">0.649</td>
+</tr>
+<tr class="even">
+<td align="right">75</td>
+<td align="right">3.539</td>
+<td align="right">0.695</td>
+<td align="right">0.699</td>
+</tr>
+<tr class="odd">
+<td align="right">80</td>
+<td align="right">2.692</td>
+<td align="right">0.627</td>
+<td align="right">0.633</td>
+</tr>
+<tr class="even">
+<td align="right">85</td>
+<td align="right">1.239</td>
+<td align="right">0.334</td>
+<td align="right">0.338</td>
+</tr>
+<tr class="odd">
+<td align="right">90</td>
+<td align="right">0.000</td>
+<td align="right">0.000</td>
+<td align="right">0.000</td>
+</tr>
+</tbody>
+</table>
+<p>点推定は保存済みのブートストラップの結果と同じで、標準誤差は1,000反復のブートストラップと比べて2%以内の差でした。
+1,000回の当てはめ直しが要らないので、計算は数秒で終わります。
+サンドイッチ分散の結果では、<code>survival_curves</code> に
+<code>survival_reference_se</code> と <code>survival_exposed_se</code>
+の列が加わり、<code><a href="../reference/plot_survival.html">plot_survival()</a></code>
+はこの列から帯を描きます。</p>
 <p>返り値は編集可能な <code>ggplot</code>
 オブジェクトです。<code>+ ggplot2::labs()</code> でラベルを、
 <code>+ ggplot2::theme()</code>
 で外観を変更し、<code><a href="https://ggplot2.tidyverse.org/reference/ggsave.html" class="external-link">ggplot2::ggsave()</a></code> で保存できます。</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggsave.html" class="external-link">ggsave</a></span><span class="op">(</span><span class="st">"yll.png"</span>, <span class="fu"><a href="../reference/plot_yll.html">plot_yll</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span>, width <span class="op">=</span> <span class="fl">6</span>, height <span class="op">=</span> <span class="fl">4</span>, dpi <span class="op">=</span> <span class="fl">300</span><span class="op">)</span></span></code></pre></div>
+</div>
 </div>
 <div class="section level2">
 <h2 id="future-による並列実行を使います">future による並列実行を使います<a class="anchor" aria-label="anchor" href="#future-%E3%81%AB%E3%82%88%E3%82%8B%E4%B8%A6%E5%88%97%E5%AE%9F%E8%A1%8C%E3%82%92%E4%BD%BF%E3%81%84%E3%81%BE%E3%81%99"></a>

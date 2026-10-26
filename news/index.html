@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">estimandYLL</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,17 +41,27 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.1.0" id="estimandyll-010">estimandYLL 0.1.0<a class="anchor" aria-label="anchor" href="#estimandyll-010"></a></h2>
-<ul><li>Replace the development API with <code><a href="../reference/estimate_yll.html">estimate_yll()</a></code>, two explicitly named comparator functions, and <code><a href="../reference/plot_yll.html">plot_yll()</a></code> / <code><a href="../reference/plot_survival.html">plot_survival()</a></code>.</li>
-<li>Require the baseline target population for the main estimator. Always return reference-minus-exposed restricted expected residual lifetime; remove policy interventions, display measures, and estimand-specific wrappers.</li>
-<li>Keep the existing mortality models, annual pooled-logistic person-period expansion, individual conditioning, integration, and participant bootstrap.</li>
-<li>Return one common five-element result with descriptive ERL and survival names, bootstrap estimates, and explicit failure records. Flag finite but impossible bootstrap lifetimes without silently dropping their values.</li>
-<li>Keep normal and percentile intervals for the main estimator. All plotting functions return editable ggplot2 objects.</li>
-<li>Validate incomplete data, duplicate IDs and invalid settings before fitting; preserve the caller’s random state and parallel/progress configuration.</li>
-<li>Replace obsolete documentation with an English tutorial, interpretation and comparator articles, a migration guide, and a Japanese introduction.</li>
-<li>Show public YLL examples at five-year starting-age intervals with 95% confidence intervals from 1,000 bootstrap replicates. Include the complete saved synthetic result and reproduction scripts, including a two-worker future check.</li>
+<h2 class="pkg-version" data-toc-text="0.2.0" id="estimandyll-020">estimandYLL 0.2.0<a class="anchor" aria-label="anchor" href="#estimandyll-020"></a></h2>
+<ul><li>Add <code>variance = "sandwich"</code> to <code><a href="../reference/estimate_yll.html">estimate_yll()</a></code>. The model is fitted once, and intervals use the empirical sandwich variance of the pooled logistic score stacked with the standardization estimating equations (Zivich et al., 2025, arXiv:2504.13291). It accounts for both the hazard model and the target population’s covariate distribution. Spline knots are treated as fixed.</li>
+<li>On <code>yll_toy</code>, sandwich standard errors were 0.97 to 1.02 times those of a 1,000-replicate bootstrap and of the spread over 500 simulated datasets. One call took 1 to 3 seconds; see <code>notes/sandwich-validation</code>.</li>
+<li>With <code>variance = "sandwich"</code>, <code>survival_curves</code> gains <code>survival_reference_se</code> and <code>survival_exposed_se</code>, and <code><a href="../reference/plot_survival.html">plot_survival()</a></code> draws bands from them. Only normal-approximation intervals are available.</li>
+<li>The variance is accumulated over groups of people, so memory use for predictions does not grow with the size of the target population.</li>
+<li>The default remains <code>variance = "bootstrap"</code>, so 0.1.0 results are reproduced unchanged. <code>meta$variance</code> records the method for every estimator.</li>
 </ul></div>
-  </main></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.0" id="estimandyll-010">estimandYLL 0.1.0<a class="anchor" aria-label="anchor" href="#estimandyll-010"></a></h2>
+<ul><li><p>Archived on Zenodo as <a href="doi:10.5281/zenodo.23653506" class="uri">doi:10.5281/zenodo.23653506</a>.</p></li>
+<li><p>Replace the development API with <code><a href="../reference/estimate_yll.html">estimate_yll()</a></code>, two explicitly named comparator functions, and <code><a href="../reference/plot_yll.html">plot_yll()</a></code> / <code><a href="../reference/plot_survival.html">plot_survival()</a></code>.</p></li>
+<li><p>Require the baseline target population for the main estimator. Always return reference-minus-exposed restricted expected residual lifetime; remove policy interventions, display measures, and estimand-specific wrappers.</p></li>
+<li><p>Keep the existing mortality models, annual pooled-logistic person-period expansion, individual conditioning, integration, and participant bootstrap.</p></li>
+<li><p>Return one common five-element result with descriptive ERL and survival names, bootstrap estimates, and explicit failure records. Flag finite but impossible bootstrap lifetimes without silently dropping their values.</p></li>
+<li><p>Keep normal and percentile intervals for the main estimator. All plotting functions return editable ggplot2 objects.</p></li>
+<li><p>Validate incomplete data, duplicate IDs and invalid settings before fitting; preserve the caller’s random state and parallel/progress configuration.</p></li>
+<li><p>Replace obsolete documentation with an English tutorial, interpretation and comparator articles, a migration guide, and a Japanese introduction.</p></li>
+<li><p>Show public YLL examples at five-year starting-age intervals with 95% confidence intervals from 1,000 bootstrap replicates. Include the complete saved synthetic result and reproduction scripts, including a two-worker future check.</p></li>
+</ul></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

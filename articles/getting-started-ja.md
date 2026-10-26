@@ -96,6 +96,60 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
 YLL の図は、5歳刻みの点推定と95%信頼区間をエラーバーで表示します。
 生存曲線の図は、同じ1,000反復から求めた95%信頼区間を帯で表示します。
 
+### 1回の当てはめで求めるサンドイッチ分散
+
+`variance = "sandwich"`
+と指定すると、モデルを1回だけ当てはめて信頼区間を求めます。
+人ごとに合算した pooled logistic
+のスコアと、標準化した生存曲線の推定方程式を積み重ね、
+経験サンドイッチ分散で標準誤差を求めます （[Zivich et al.,
+2025](https://doi.org/10.48550/arXiv.2504.13291)）。
+この標準誤差にはハザードモデルの推定と、対象集団の共変量分布の両方によるばらつきが入ります。
+スプラインのノットは固定として扱います。
+区間は正規近似だけで、`B`、`seed`、`use_future` は使いません。
+
+``` r
+
+data(yll_toy)
+sandwich <- estimate_yll(
+  data = yll_toy,
+  time_var = "period", event_var = "event",
+  exposure_var = "hypertension",
+  reference_level = "No", exposed_level = "Yes",
+  age_at_entry_var = "age", target_population = "unexposed",
+  age_start = 40, age_end = 90, age_interval = 5,
+  confounders_baseline = c("sex", "education_years", "bmi", "smoke_binary"),
+  variance = "sandwich"
+)
+knitr::kable(data.frame(
+  starting_age = sandwich$summary$starting_age,
+  yll = sandwich$summary$yll,
+  se_sandwich = sandwich$summary$yll_se,
+  se_bootstrap = result$summary$yll_se
+), digits = 3)
+```
+
+| starting_age |   yll | se_sandwich | se_bootstrap |
+|-------------:|------:|------------:|-------------:|
+|           40 | 5.661 |       0.838 |        0.853 |
+|           45 | 5.423 |       0.668 |        0.678 |
+|           50 | 5.247 |       0.621 |        0.619 |
+|           55 | 5.101 |       0.608 |        0.599 |
+|           60 | 4.836 |       0.602 |        0.593 |
+|           65 | 4.392 |       0.602 |        0.597 |
+|           70 | 4.009 |       0.650 |        0.649 |
+|           75 | 3.539 |       0.695 |        0.699 |
+|           80 | 2.692 |       0.627 |        0.633 |
+|           85 | 1.239 |       0.334 |        0.338 |
+|           90 | 0.000 |       0.000 |        0.000 |
+
+点推定は保存済みのブートストラップの結果と同じで、標準誤差は1,000反復のブートストラップと比べて2%以内の差でした。
+1,000回の当てはめ直しが要らないので、計算は数秒で終わります。
+サンドイッチ分散の結果では、`survival_curves` に `survival_reference_se`
+と `survival_exposed_se`
+の列が加わり、[`plot_survival()`](https://shuntaros.github.io/estimandYLL/reference/plot_survival.md)
+はこの列から帯を描きます。
+
 返り値は編集可能な `ggplot` オブジェクトです。`+ ggplot2::labs()`
 でラベルを、 `+ ggplot2::theme()`
 で外観を変更し、[`ggplot2::ggsave()`](https://ggplot2.tidyverse.org/reference/ggsave.html)
