@@ -1,5 +1,6 @@
 # estimandYLL 0.2.0
 
+* Archived on Zenodo as doi:10.5281/zenodo.23657251.
 * Add `variance = "sandwich"` to `estimate_yll()`. The model is fitted once,
   and intervals use the empirical sandwich variance of the pooled logistic
   score stacked with the standardization estimating equations (Zivich et al.,
