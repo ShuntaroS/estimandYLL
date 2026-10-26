@@ -2,6 +2,7 @@
 
 ## estimandYLL 0.2.0
 
+- Archived on Zenodo as <doi:10.5281/zenodo.23657251>.
 - Add `variance = "sandwich"` to
   [`estimate_yll()`](https://shuntaros.github.io/estimandYLL/reference/estimate_yll.md).
   The model is fitted once, and intervals use the empirical sandwich

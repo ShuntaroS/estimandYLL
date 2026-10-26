@@ -37,12 +37,13 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/ShuntaroS/estimandYLL/blob/v0.2.0/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/ShuntaroS/estimandYLL/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.0" id="estimandyll-020">estimandYLL 0.2.0<a class="anchor" aria-label="anchor" href="#estimandyll-020"></a></h2>
-<ul><li>Add <code>variance = "sandwich"</code> to <code><a href="../reference/estimate_yll.html">estimate_yll()</a></code>. The model is fitted once, and intervals use the empirical sandwich variance of the pooled logistic score stacked with the standardization estimating equations (Zivich et al., 2025, arXiv:2504.13291). It accounts for both the hazard model and the target population’s covariate distribution. Spline knots are treated as fixed.</li>
+<ul><li>Archived on Zenodo as <a href="doi:10.5281/zenodo.23657251" class="uri">doi:10.5281/zenodo.23657251</a>.</li>
+<li>Add <code>variance = "sandwich"</code> to <code><a href="../reference/estimate_yll.html">estimate_yll()</a></code>. The model is fitted once, and intervals use the empirical sandwich variance of the pooled logistic score stacked with the standardization estimating equations (Zivich et al., 2025, arXiv:2504.13291). It accounts for both the hazard model and the target population’s covariate distribution. Spline knots are treated as fixed.</li>
 <li>On <code>yll_toy</code>, sandwich standard errors were 0.97 to 1.02 times those of a 1,000-replicate bootstrap and of the spread over 500 simulated datasets. One call took 1 to 3 seconds; see <code>notes/sandwich-validation</code>.</li>
 <li>With <code>variance = "sandwich"</code>, <code>survival_curves</code> gains <code>survival_reference_se</code> and <code>survival_exposed_se</code>, and <code><a href="../reference/plot_survival.html">plot_survival()</a></code> draws bands from them. Only normal-approximation intervals are available.</li>
 <li>The variance is accumulated over groups of people, so memory use for predictions does not grow with the size of the target population.</li>
