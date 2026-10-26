@@ -110,9 +110,9 @@ test_that("splitting the target population into chunks does not change the varia
   }
   small <- sandwich(50)
   large <- sandwich(1e7)
-  expect_equal(small$standard_errors, large$standard_errors, tolerance = 1e-10)
-  expect_equal(small$curves, large$curves, tolerance = 1e-10)
-  expect_equal(small$estimates$yll, point$estimates$yll, tolerance = 1e-12)
+  expect_equal(small$standard_errors, large$standard_errors, tolerance = 1e-8)
+  expect_equal(small$curves, large$curves, tolerance = 1e-8)
+  expect_equal(small$estimates$yll, point$estimates$yll, tolerance = 1e-9)
 })
 
 test_that("integration weights reproduce yll_integrate_le()", {

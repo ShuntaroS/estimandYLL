@@ -55,8 +55,11 @@ yll_sandwich_logistic <- function(fit, person_ids, data, id_var, exposure_var,
   points$first <- as.integer(round(points$starting_age - age_start)) + 1L
   points$column <- as.integer(round(points$age - age_start)) + 1L
   n_points <- nrow(points)
-  by_column <- split(seq_len(n_points), points$column)
-  by_first <- split(seq_len(n_points), points$first)
+  # Survival at the starting age is one for everyone, so those points have no
+  # variance. Leaving them out of the gradient keeps it exactly zero.
+  moving <- which(points$column > points$first)
+  by_column <- split(moving, points$column[moving])
+  by_first <- split(moving, points$first[moving])
 
   terms_rhs <- stats::delete.response(stats::terms(fit))
   design <- function(grid, level) {
@@ -67,6 +70,9 @@ yll_sandwich_logistic <- function(fit, person_ids, data, id_var, exposure_var,
 
   n_coef <- length(beta)
   n_columns <- 2L * n_points
+  # Cross-products are accumulated around the first chunk's means, which
+  # avoids cancellation when survival probabilities are close to one.
+  shift <- NULL
   sum_points <- numeric(n_columns)
   cross_points <- matrix(0, n_columns, n_columns)
   cross_influence <- matrix(0, n_columns, n_coef)
@@ -111,15 +117,18 @@ yll_sandwich_logistic <- function(fit, person_ids, data, id_var, exposure_var,
         }
       }
     }
+    if (is.null(shift)) shift <- colMeans(chunk_points)
+    chunk_points <- chunk_points - rep(shift, each = n_rows)
     sum_points <- sum_points + colSums(chunk_points)
     cross_points <- cross_points + crossprod(chunk_points)
     cross_influence <- cross_influence + crossprod(chunk_points, influence_beta[rows, , drop = FALSE])
   }
 
-  estimate <- sum_points / n_target
+  offset_mean <- sum_points / n_target
+  estimate <- shift + offset_mean
   gradient <- gradient / n_target
-  centered <- (cross_points - n_target * tcrossprod(estimate)) / n_target^2
-  mixed <- (cross_influence - tcrossprod(estimate, colSums(influence_beta[target, , drop = FALSE]))) %*%
+  centered <- (cross_points - n_target * tcrossprod(offset_mean)) / n_target^2
+  mixed <- (cross_influence - tcrossprod(offset_mean, colSums(influence_beta[target, , drop = FALSE]))) %*%
     gradient / n_target
   covariance <- centered + mixed + t(mixed) + crossprod(gradient, omega %*% gradient)
 
