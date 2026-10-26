@@ -11,6 +11,7 @@
 ^README\.Rmd$
 ^LICENSE\.md$
 ^cran-comments\.md$
+^CITATION\.cff$
 ^docs$
 ^_pkgdown\.yml$
 ^pkgdown$

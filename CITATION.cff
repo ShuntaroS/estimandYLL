@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+type: software
+title: "estimandYLL: Years of Life Lost via the G-Formula"
+version: 0.1.0
+abstract: >-
+  Estimates years of life lost as the difference in restricted expected
+  residual lifetime between two binary exposure scenarios on the attained-age
+  scale. A pooled logistic parametric g-formula standardizes individual
+  conditional survival curves over an explicitly selected baseline population.
+  Includes Poisson and Royston-Parmar model comparators, participant bootstrap
+  confidence intervals, and plotting helpers.
+authors:
+  - family-names: Sato
+    given-names: Shuntaro
+    email: shuntaro.sato.stat@gmail.com
+    orcid: "https://orcid.org/0000-0002-6055-3649"
+license: MIT
+repository-code: "https://github.com/ShuntaroS/estimandYLL"
+url: "https://shuntaros.github.io/estimandYLL/"
+keywords:
+  - years of life lost
+  - expected residual lifetime
+  - parametric g-formula
+  - causal inference
+  - survival analysis
+  - R

@@ -1,0 +1,13 @@
+citHeader("To cite estimandYLL in publications, please use:")
+
+bibentry(
+  bibtype = "Manual",
+  title   = "{estimandYLL}: Years of Life Lost via the G-Formula",
+  author  = person(
+    "Shuntaro", "Sato",
+    comment = c(ORCID = "0000-0002-6055-3649")
+  ),
+  year    = "2026",
+  note    = sprintf("R package version %s", meta$Version),
+  url     = "https://github.com/ShuntaroS/estimandYLL"
+)
