@@ -8,13 +8,13 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/ShuntaroS/estimandYLL/blob/main/DESCRIPTION)
+[`inst/CITATION`](https://github.com/ShuntaroS/estimandYLL/blob/main/inst/CITATION)
 
 Sato S (2026). *estimandYLL: Years of Life Lost via the G-Formula*. R
 package version 0.1.0, <https://github.com/ShuntaroS/estimandYLL>.
 
     @Manual{,
-      title = {estimandYLL: Years of Life Lost via the G-Formula},
+      title = {{estimandYLL}: Years of Life Lost via the G-Formula},
       author = {Shuntaro Sato},
       year = {2026},
       note = {R package version 0.1.0},
