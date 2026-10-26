@@ -2,6 +2,7 @@
 
 [![R-CMD-check](https://github.com/ShuntaroS/estimandYLL/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/ShuntaroS/estimandYLL/actions/workflows/R-CMD-check.yaml)
 [![pkgdown](https://github.com/ShuntaroS/estimandYLL/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/ShuntaroS/estimandYLL/actions/workflows/pkgdown.yaml)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23653505.svg)](https://doi.org/10.5281/zenodo.23653505)
 
 Estimate **years of life lost (YLL)** between two binary exposure
 scenarios, for a stated baseline population and age window.
